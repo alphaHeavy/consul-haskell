@@ -1,10 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Consul.Internal (
-    getDatacenters
+    deleteKey
+  , getDatacenters
   , getKey
-  , putKey) where
+  , putKey
 
+  --Health
+  , getServiceChecks
+  ) where
+
+import Control.Monad.IO.Class
 import Data.Aeson (decode)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
@@ -17,26 +23,47 @@ import Network.HTTP.Client
 import Network.Socket (PortNumber(..))
 
 {- Key Value Store -}
-getKey :: Manager -> Text -> PortNumber -> KeyValueRequest -> IO (Maybe KeyValue)
+getKey :: MonadIO m => Manager -> Text -> PortNumber -> KeyValueRequest -> m (Maybe KeyValue)
 getKey manager hostname (PortNum portNumber) request = do
-  initReq <- parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvrKey request]
-  withResponse initReq manager $ \ response -> do
+  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvrKey request]
+  liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
     return $ listToMaybe =<< (decode $ BL.fromStrict body)
 
-putKey :: Manager -> Text -> PortNumber -> KeyValuePut -> IO Text
+putKey :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> m Text
 putKey manager hostname (PortNum portNumber) request = do
-  initReq <- parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvpKey request]
+  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvpKey request]
   let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ kvpValue request}
-  withResponse httpReq manager $ \ response -> do
+  liftIO $ withResponse httpReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
     return $ TE.decodeUtf8 body
 
+
+deleteKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
+deleteKey manager hostname (PortNum portNumber) key = do
+  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", key]
+  let httpReq = initReq { method = "DELETE"}
+  liftIO $ withResponse httpReq manager $ \ response -> do
+    _bodyParts <- brConsume $ responseBody response
+    return ()
+
+{- Health -}
+getServiceChecks :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m [Check]
+getServiceChecks manager hostname (PortNum portNumber) name = do
+  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/health/checks/", name]
+  liftIO $ withResponse initReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ maybe [] id (decode $ BL.fromStrict body)
+
+getServiceHealth :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m Health
+
+
 {- Catalog -}
-getDatacenters :: Manager -> Text -> PortNumber -> IO [Datacenter]
-getDatacenters manager hostname (PortNum portNumber) = do
+getDatacenters :: MonadIO m => Manager -> Text -> PortNumber -> m [Datacenter]
+getDatacenters manager hostname (PortNum portNumber) = liftIO $ do
   initReq <- parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/catalog/datacenters/"]
   withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response

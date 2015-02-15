@@ -32,7 +32,8 @@ library
     bytestring,
     http-client,
     network,
-    text
+    text,
+    transformers
   ghc-options:
     -Wall
 

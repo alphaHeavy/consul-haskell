@@ -1,36 +1,35 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Network.Consul (getKeyInternal) where
+module Network.Consul (
+    deleteKey
+  , getKey
+  , initializeConsulClient
+  , putKey
+  , ConsulClient
+) where
 
-import Data.Aeson (decode,parseJSON)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Base64 as B64
-import qualified Data.ByteString.Lazy as BL
-import Data.Maybe
+import Control.Monad.IO.Class
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
+import qualified Network.Consul.Internal as I
 import Network.Consul.Types
-import Network.HTTP.Client
-import Network.HTTP.Client.Internal
+import Network.HTTP.Client (defaultManagerSettings, newManager, ManagerSettings)
+import Network.Socket (PortNumber)
 
-getKeyInternal :: Manager -> KeyValueRequest -> IO (Maybe KeyValue)
-getKeyInternal manager request = do
-  initReq <- parseUrl $ "http://localhost:8500/v1/kv/" ++ (T.unpack $ kvrKey request)
-  withResponse initReq manager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    print body
-    let val :: Maybe [KeyValue] = decode $ BL.fromStrict body
-    return $ listToMaybe =<< val
+initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe ManagerSettings -> m ConsulClient
+initializeConsulClient hostname port settings = do
+  manager <- liftIO $ case settings of
+                        Just x -> newManager x
+                        Nothing -> newManager defaultManagerSettings
+  return $ ConsulClient manager hostname port
 
-putKeyInternal :: Manager -> KeyValuePut -> IO Text
-putKeyInternal manager request = do
-  initReq <- parseUrl $ "http://localhost:8500/v1/kv/" ++ (T.unpack $ kvpKey request)
-  let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ kvpValue request}
-  withResponse httpReq manager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ TE.decodeUtf8 body
+getKey :: MonadIO m => ConsulClient -> KeyValueRequest -> m (Maybe KeyValue)
+getKey _client@ConsulClient{..} request = I.getKey ccManager ccHostname ccPort request
+
+putKey :: MonadIO m => ConsulClient -> KeyValuePut -> m Text
+putKey _client@ConsulClient{..} request = I.putKey ccManager ccHostname ccPort request
+
+deleteKey :: MonadIO m => ConsulClient -> Text -> m ()
+deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key
 
