@@ -32,4 +32,3 @@ putKey _client@ConsulClient{..} request = I.putKey ccManager ccHostname ccPort r
 
 deleteKey :: MonadIO m => ConsulClient -> Text -> m ()
 deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key
-
