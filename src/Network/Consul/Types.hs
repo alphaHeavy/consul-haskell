@@ -2,12 +2,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Network.Consul.Types (
   Check(..),
+  Consistency(..),
   ConsulClient(..),
   Datacenter (..),
   Health(..),
   KeyValue(..),
   KeyValuePut(..),
-  KeyValueRequest(..),
   RegisterHealthCheck(..),
   RegisterService(..),
   Session(..),
@@ -52,12 +52,6 @@ data KeyValue = KeyValue {
 data KeyValuePut = KeyValuePut {
   kvpKey :: Text,
   kvpValue :: ByteString
-}
-
-data KeyValueRequest = KeyValueRequest {
-  kvrKey :: Text,
-  kvrConsistency :: Maybe Consistency,
-  kvrDatacenter :: Maybe Datacenter
 }
 
 data Session = Session {

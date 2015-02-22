@@ -31,6 +31,7 @@ module Network.Consul.Internal (
 
 import Control.Monad.IO.Class
 import Data.Aeson (decode,encode)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import Data.Maybe
@@ -41,11 +42,21 @@ import Network.Consul.Types
 import Network.HTTP.Client
 import Network.Socket (PortNumber(..))
 
+createRequest :: MonadIO m => Text -> PortNumber -> Text -> Maybe Text-> Maybe ByteString -> Maybe Datacenter -> m Request
+createRequest hostname (PortNum portNumber) endpoint queryString body dc = do
+  let baseUrl = T.concat ["http://",hostname,":",T.pack $ show portNumber,endpoint,needQueryString,maybe "" id queryString, maybe "" (\ (Datacenter x) -> T.concat["&",x]) dc]
+  initReq <- liftIO $ parseUrl $ T.unpack baseUrl
+  case body of
+    Just x -> return initReq{ method = "PUT", requestBody = RequestBodyBS x}
+    Nothing -> return initReq
+  where
+    needQueryString = if isJust dc || isJust queryString then "?" else ""
+
 {- Key Value Store -}
-getKey :: MonadIO m => Manager -> Text -> PortNumber -> KeyValueRequest -> m (Maybe KeyValue)
-getKey manager hostname (PortNum portNumber) request = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvrKey request]
-  liftIO $ withResponse initReq manager $ \ response -> do
+getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
+getKey manager hostname port key consistency dc = do
+  request <- createRequest hostname port (T.concat ["/v1/kv/",key]) (fmap (\ x -> T.concat["consistency=", T.pack $ show x]) consistency) Nothing dc
+  liftIO $ withResponse request manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
     return $ listToMaybe =<< (decode $ BL.fromStrict body)
@@ -68,7 +79,7 @@ putKey manager hostname (PortNum portNumber) request = do
     let body = B.concat bodyParts
     return $ TE.decodeUtf8 body
 
-putKeyAcquireLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> m Boolean
+putKeyAcquireLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> m Bool
 putKeyAcquireLock manager hostname (PortNum portNumber) request session = do
   initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvpKey request,"?acquire=",sId session]
   let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ kvpValue request}
@@ -79,7 +90,7 @@ putKeyAcquireLock manager hostname (PortNum portNumber) request session = do
       "true" -> return True
       "false" -> return False
 
-putKeyReleaseLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> m Boolean
+putKeyReleaseLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> m Bool
 putKeyReleaseLock manager hostname (PortNum portNumber) request session = do
   initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvpKey request,"?release=",sId session]
   let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ kvpValue request}
