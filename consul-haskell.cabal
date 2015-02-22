@@ -2,6 +2,10 @@ name:                consul-haskell
 version:             0.1
 synopsis:            A consul client for Haskell
 description:
+  A consul client for Haskell
+  .
+  Requires consul 0.5 or later.
+
 license:             BSD3
 license-file:        LICENSE
 author:              Steve Severance
