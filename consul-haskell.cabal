@@ -54,6 +54,9 @@ test-suite consul-haskell-test
     tasty,
     tasty-hunit,
     HUnit                      >= 1.2
+  ghc-options:
+    -Wall
+
 
 source-repository head
   type:     git
