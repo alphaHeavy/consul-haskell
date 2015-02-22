@@ -67,7 +67,7 @@ before_script:
   - wget 'https://dl.bintray.com/mitchellh/consul/0.5.0_linux_amd64.zip'
   - unzip "0.5.0_linux_amd64.zip"
 script:
- - ../consul agent -server -bootstrap-expect 1 -data-dir /tmp/consul &
+ - ./consul agent -server -bootstrap-expect 1 -data-dir /tmp/consul &
  # -v2 provides useful information for debugging
  - cabal-1.18 configure --enable-tests --enable-benchmarks -v2
  # this builds all libraries and executables

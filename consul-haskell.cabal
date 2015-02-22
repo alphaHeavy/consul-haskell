@@ -47,7 +47,7 @@ test-suite consul-haskell-test
   main-is:
     Main.hs
   build-depends:
-    base                       >= 4.7 && < 5,
+    base                       >= 4.6 && < 5,
     consul-haskell,
     http-client,
     network,
