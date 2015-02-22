@@ -47,11 +47,13 @@ data KeyValue = KeyValue {
   kvFlags :: Word64,
   kvSession :: Maybe Text,
   kvKey :: Text
-} deriving (Show)
+} deriving (Show,Eq)
 
 data KeyValuePut = KeyValuePut {
   kvpKey :: Text,
-  kvpValue :: ByteString
+  kvpValue :: ByteString,
+  kvpCasIndex :: Maybe Word64
+  
 }
 
 data Session = Session {

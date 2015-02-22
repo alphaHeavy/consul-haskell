@@ -48,21 +48,13 @@ test-suite consul-haskell-test
     Main.hs
   build-depends:
     base                       >= 4.7 && < 5,
-    bytestring,
-    cereal,
-    containers,
-    hex,
-    mtl,
-    protobuf,
-    tagged,
-    text,
-    unordered-containers,
+    consul-haskell,
+    http-client,
+    network,
     tasty,
     tasty-hunit,
-    tasty-quickcheck,
-    HUnit                      >= 1.2,
-    QuickCheck                 >= 2.4
+    HUnit                      >= 1.2
 
 source-repository head
   type:     git
-  location: https://github.com/alphaHeavy/protobuf.git
+  location: https://github.com/alphaHeavy/consul-haskell.git

@@ -47,8 +47,9 @@ createRequest hostname (PortNum portNumber) endpoint queryString body dc = do
   let baseUrl = T.concat ["http://",hostname,":",T.pack $ show portNumber,endpoint,needQueryString,maybe "" id queryString, maybe "" (\ (Datacenter x) -> T.concat["&",x]) dc]
   initReq <- liftIO $ parseUrl $ T.unpack baseUrl
   case body of
-    Just x -> return initReq{ method = "PUT", requestBody = RequestBodyBS x}
-    Nothing -> return initReq
+    Just x -> return initReq{ method = "PUT", requestBody = RequestBodyBS x, checkStatus = \ _ _ _ -> Nothing}
+    Nothing -> return initReq{checkStatus = \ _ _ _ -> Nothing}
+
   where
     needQueryString = if isJust dc || isJust queryString then "?" else ""
 
@@ -56,13 +57,17 @@ createRequest hostname (PortNum portNumber) endpoint queryString body dc = do
 getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
 getKey manager hostname port key consistency dc = do
   request <- createRequest hostname port (T.concat ["/v1/kv/",key]) (fmap (\ x -> T.concat["consistency=", T.pack $ show x]) consistency) Nothing dc
-  liftIO $ withResponse request manager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ listToMaybe =<< (decode $ BL.fromStrict body)
+  liftIO $ do
+   withResponse request manager $ \ response -> do
+    case responseStatus response of
+      status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ listToMaybe =<< (decode $ BL.fromStrict body)
+      _ -> return Nothing
 
-listKeys :: MonadIO m => Manager -> Text -> PortNumber ->  Text -> m [Text]
-listKeys manager hostname (PortNum portNumber) prefix = do
+listKeys :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Consistency -> Maybe Datacenter -> m [Text]
+listKeys manager hostname (PortNum portNumber) prefix consistency dc = do
   initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", prefix,"?keys"]
   liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
