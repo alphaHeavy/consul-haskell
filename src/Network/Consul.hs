@@ -34,7 +34,7 @@ getKey _client@ConsulClient{..} = undefined -- I.getKey ccManager ccHostname ccP
 --listKeys :: MonadIO m => ConsulClient ->
 
 putKey :: MonadIO m => ConsulClient -> KeyValuePut -> m Text
-putKey _client@ConsulClient{..} request = I.putKey ccManager ccHostname ccPort request
+putKey _client@ConsulClient{..} request = undefined -- I.putKey ccManager ccHostname ccPort request
 
 deleteKey :: MonadIO m => ConsulClient -> Text -> m ()
 deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key

@@ -8,6 +8,7 @@ module Network.Consul.Types (
   Health(..),
   KeyValue(..),
   KeyValuePut(..),
+  RegisterRequest(..),
   RegisterHealthCheck(..),
   RegisterService(..),
   Session(..),
@@ -52,8 +53,8 @@ data KeyValue = KeyValue {
 data KeyValuePut = KeyValuePut {
   kvpKey :: Text,
   kvpValue :: ByteString,
-  kvpCasIndex :: Maybe Word64
-  
+  kvpCasIndex :: Maybe Word64,
+  kvpFlags :: Maybe Word64
 }
 
 data Session = Session {

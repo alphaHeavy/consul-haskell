@@ -43,68 +43,89 @@ import Network.HTTP.Client
 import Network.Socket (PortNumber(..))
 
 createRequest :: MonadIO m => Text -> PortNumber -> Text -> Maybe Text-> Maybe ByteString -> Maybe Datacenter -> m Request
-createRequest hostname (PortNum portNumber) endpoint queryString body dc = do
-  let baseUrl = T.concat ["http://",hostname,":",T.pack $ show portNumber,endpoint,needQueryString,maybe "" id queryString, maybe "" (\ (Datacenter x) -> T.concat["&",x]) dc]
+createRequest hostname (PortNum portNumber) endpoint query body dc = do
+  let baseUrl = T.concat ["http://",hostname,":",T.pack $ show portNumber,endpoint,needQueryString
+                         ,maybe "" id query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
   initReq <- liftIO $ parseUrl $ T.unpack baseUrl
   case body of
     Just x -> return initReq{ method = "PUT", requestBody = RequestBodyBS x, checkStatus = \ _ _ _ -> Nothing}
     Nothing -> return initReq{checkStatus = \ _ _ _ -> Nothing}
-
   where
-    needQueryString = if isJust dc || isJust queryString then "?" else ""
+    needQueryString = if isJust dc || isJust query then "?" else ""
+    prefixAnd = if isJust query && isJust dc then "&" else ""
 
 {- Key Value Store -}
 getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
-getKey manager hostname port key consistency dc = do
-  request <- createRequest hostname port (T.concat ["/v1/kv/",key]) (fmap (\ x -> T.concat["consistency=", T.pack $ show x]) consistency) Nothing dc
-  liftIO $ do
-   withResponse request manager $ \ response -> do
+getKey manager hostname portnumber key consistency dc = do
+  request <- createRequest hostname portnumber (T.concat ["/v1/kv/",key]) (fmap (\ x -> T.concat["consistency=", T.pack $ show x]) consistency) Nothing dc
+  liftIO $ withResponse request manager $ \ response -> do
     case responseStatus response of
-      status200 -> do
+      _status200 -> do
         bodyParts <- brConsume $ responseBody response
         let body = B.concat bodyParts
         return $ listToMaybe =<< (decode $ BL.fromStrict body)
       _ -> return Nothing
 
 listKeys :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Consistency -> Maybe Datacenter -> m [Text]
-listKeys manager hostname (PortNum portNumber) prefix consistency dc = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", prefix,"?keys"]
+listKeys manager hostname portNumber prefix consistency dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", prefix]) (Just "keys") Nothing dc
+  liftIO $ withResponse initReq manager $ \ response ->
+    case responseStatus response of
+      _status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ maybe [] id $ decode $ BL.fromStrict body
+      _ -> return []
+
+putKey :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Maybe Datacenter -> m Bool
+putKey manager hostname portNumber request dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", kvpKey request]) fquery (Just $ kvpValue request) dc
   liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
-    return $ maybe [] id $ decode $ BL.fromStrict body
+    case TE.decodeUtf8 body of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags request
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex request
+    query = T.intercalate "&" $ catMaybes [flags,cas]
+    fquery = if query /= T.empty then Just query else Nothing
 
-
-putKey :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> m Text
-putKey manager hostname (PortNum portNumber) request = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvpKey request]
-  let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ kvpValue request}
-  liftIO $ withResponse httpReq manager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ TE.decodeUtf8 body
-
-putKeyAcquireLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> m Bool
-putKeyAcquireLock manager hostname (PortNum portNumber) request session = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvpKey request,"?acquire=",sId session]
-  let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ kvpValue request}
-  liftIO $ withResponse httpReq manager $ \ response -> do
+putKeyAcquireLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
+putKeyAcquireLock manager hostname portNumber request (Session session _) dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", kvpKey request]) fquery (Just $ kvpValue request) dc
+  liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
     case TE.decodeUtf8 body of
       "true" -> return True
       "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags request
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex request
+    acquire = T.concat["acquire=",session]
+    query = T.intercalate "&" $ catMaybes [flags,cas,Just acquire]
+    fquery = if query /= T.empty then Just query else Nothing
 
-putKeyReleaseLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> m Bool
-putKeyReleaseLock manager hostname (PortNum portNumber) request session = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", kvpKey request,"?release=",sId session]
-  let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ kvpValue request}
-  liftIO $ withResponse httpReq manager $ \ response -> do
+putKeyReleaseLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
+putKeyReleaseLock manager hostname portNumber request (Session session _) dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", kvpKey request]) fquery (Just $ kvpValue request) dc
+  liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
     case TE.decodeUtf8 body of
       "true" -> return True
       "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags request
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex request
+    release = T.concat["release=",session]
+    query = T.intercalate "&" $ catMaybes [flags,cas,Just release]
+    fquery = if query /= T.empty then Just query else Nothing
 
 deleteKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
 deleteKey manager hostname (PortNum portNumber) key = do
