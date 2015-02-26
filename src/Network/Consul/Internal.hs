@@ -24,6 +24,8 @@ module Network.Consul.Internal (
 
   -- Session
   , createSession
+  , destroySession
+  , renewSession
 
   --Catalog
   , getDatacenters
@@ -127,9 +129,9 @@ putKeyReleaseLock manager hostname portNumber request (Session session _) dc = d
     query = T.intercalate "&" $ catMaybes [flags,cas,Just release]
     fquery = if query /= T.empty then Just query else Nothing
 
-deleteKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
-deleteKey manager hostname (PortNum portNumber) key = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/kv/", key]
+deleteKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Bool -> Maybe Datacenter -> m ()
+deleteKey manager hostname portNumber key recurse dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", key]) (if recurse then Just "recurse" else Nothing) Nothing dc
   let httpReq = initReq { method = "DELETE"}
   liftIO $ withResponse httpReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
@@ -207,16 +209,29 @@ getServiceHealth manager hostname (PortNum portNumber) name = do
     return $ decode $ BL.fromStrict body
 
 {- Session -}
-createSession :: MonadIO m => Manager -> Text -> PortNumber -> Maybe Datacenter -> SessionRequest -> m (Maybe Session)
-createSession manager hostname (PortNum portNumber) datacenter request = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/session/create"]
-  let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ BL.toStrict $ encode request}
-  liftIO $ withResponse httpReq manager $ \ response -> do
+createSession :: MonadIO m => Manager -> Text -> PortNumber -> SessionRequest -> Maybe Datacenter -> m (Maybe Session)
+createSession manager hostname portNumber request dc = do
+  initReq <- createRequest hostname portNumber "/v1/session/create" Nothing (Just $ BL.toStrict $ encode request) dc
+  liftIO $ withResponse initReq manager $ \ response -> do
     case responseStatus response of
       status200 -> do
         bodyParts <- brConsume $ responseBody response
         return $ decode $ BL.fromStrict $ B.concat bodyParts
       _ -> return Nothing
+
+destroySession :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m ()
+destroySession manager hostname portNumber (Session session _) dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/session/destroy/", session]) Nothing Nothing dc
+  liftIO $ withResponse initReq manager $ \ response -> do
+    return ()
+
+renewSession :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m Bool
+renewSession manager hostname portNumber (Session session _) dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/session/renew/", session]) Nothing Nothing dc
+  liftIO $ withResponse initReq manager $ \ response -> do
+    case responseStatus response of
+      status200 -> return True
+      _ -> return False
 
 {- Catalog -}
 getDatacenters :: MonadIO m => Manager -> Text -> PortNumber -> m [Datacenter]

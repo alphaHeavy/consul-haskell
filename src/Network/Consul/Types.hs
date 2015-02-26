@@ -12,6 +12,7 @@ module Network.Consul.Types (
   RegisterHealthCheck(..),
   RegisterService(..),
   Session(..),
+  SessionBehavior(..),
   SessionRequest(..)
 ) where
 
@@ -40,6 +41,8 @@ data Consistency = Consistent | Default | Stale deriving (Eq,Show,Enum,Ord)
 
 data HealthCheckStatus = Critical | Passing | Unknown | Warning deriving (Eq,Show,Enum,Ord)
 
+data SessionBehavior = Release | Delete deriving (Eq,Show,Enum,Ord)
+
 data KeyValue = KeyValue {
   kvCreateIndex :: Word64,
   kvLockIndex :: Word64,
@@ -66,7 +69,9 @@ data SessionRequest = SessionRequest {
   srLockDelay :: Maybe Text,
   srName :: Maybe Text,
   srNode :: Maybe Node,
-  srChecks :: [Text]
+  srChecks :: [Text],
+  srBehavor :: Maybe SessionBehavior,
+  srTtl :: Maybe Int
 }
 
 data RegisterRequest = RegisterRequest {
@@ -162,6 +167,10 @@ instance FromJSON Session where
   parseJSON (Object x) = Session <$> x .: "ID" <*> pure Nothing
   parseJSON _ = mzero
 
+instance ToJSON SessionBehavior where
+  toJSON Release = String "release"
+  toJSON Delete = String "delete"
+
 instance ToJSON RegisterHealthCheck where
   toJSON (RegisterHealthCheck id name notes script interval ttl) = object ["id" .= id, "name" .= name, "notes" .= notes, "script" .= script, "interval" .= interval, "ttl" .= ttl]
 
@@ -169,7 +178,7 @@ instance ToJSON RegisterService where
   toJSON (RegisterService id name tags port check) = object ["ID" .= id, "Name" .= name, "Tags" .= tags, "Port" .= port, "Check" .= check]
 
 instance ToJSON SessionRequest where
-  toJSON (SessionRequest lockDelay name node checks) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (fmap nNode node), "Checks" .= checks]
+  toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (fmap nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
 
 instance ToJSON (Either (Text,Text) Text) where
   toJSON (Left (script,interval)) = object ["Script" .= script, "Interval" .= interval]

@@ -37,7 +37,7 @@ putKey :: MonadIO m => ConsulClient -> KeyValuePut -> m Text
 putKey _client@ConsulClient{..} request = undefined -- I.putKey ccManager ccHostname ccPort request
 
 deleteKey :: MonadIO m => ConsulClient -> Text -> m ()
-deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key
+deleteKey _client@ConsulClient{..} key = undefined --I.deleteKey ccManager ccHostname ccPort key
 
 
 {- Agent -}
