@@ -3,19 +3,26 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Network.Consul (
-    deleteKey
+    createManagedSession
+  , deleteKey
   , getKey
   , initializeConsulClient
   , putKey
-  , ConsulClient
+  , ConsulClient(..)
+  , ManagedSession(..)
 ) where
 
+import Control.Concurrent
 import Control.Monad.IO.Class
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Traversable
 import qualified Network.Consul.Internal as I
 import Network.Consul.Types
 import Network.HTTP.Client (defaultManagerSettings, newManager, ManagerSettings)
 import Network.Socket (PortNumber)
+
+import Prelude hiding (mapM)
 
 initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe ManagerSettings -> m ConsulClient
 initializeConsulClient hostname port settings = do
@@ -45,7 +52,23 @@ deleteKey _client@ConsulClient{..} key = undefined --I.deleteKey ccManager ccHos
 {- Helper Functions -}
 
 {- ManagedSession is a session with an associated TTL healthcheck so the session will be terminated if the client dies. The healthcheck will be automatically updated. -}
-{-createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Int -> m (Maybe ManagedSession)
-createManagedSession client name ttl = do
-  undefined
--}
+data ManagedSession = ManagedSession{
+  msSession :: Session,
+  msThreadId :: ThreadId
+}
+
+createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Int -> m (Maybe ManagedSession)
+createManagedSession client@ConsulClient{..} name ttl = do
+  let r = SessionRequest Nothing name Nothing [] (Just Release) (Just ttl)
+  s <- I.createSession ccManager ccHostname ccPort r Nothing
+  mapM f s
+  where
+    f x = do
+      tid <- liftIO $ forkIO $ runThread client x
+      return $ ManagedSession x tid
+
+    runThread :: ConsulClient -> Session -> IO ()
+    runThread _client@ConsulClient{..} s = do
+      threadDelay 10
+      I.renewSession ccManager ccHostname ccPort s Nothing
+      return ()
