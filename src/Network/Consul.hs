@@ -5,10 +5,14 @@
 module Network.Consul (
     createManagedSession
   , deleteKey
+  , destroyManagedSession
   , getKey
   , initializeConsulClient
   , putKey
+  , withManagedSession
+  , Consistency(..)
   , ConsulClient(..)
+  , Datacenter(..)
   , ManagedSession(..)
 ) where
 
@@ -35,8 +39,8 @@ initializeConsulClient hostname port settings = do
 {- Key Value -}
 
 
-getKey :: MonadIO m => ConsulClient -> m (Maybe KeyValue)
-getKey _client@ConsulClient{..} = undefined -- I.getKey ccManager ccHostname ccPort request
+getKey :: MonadIO m => ConsulClient -> Text -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
+getKey _client@ConsulClient{..} = I.getKey ccManager ccHostname ccPort
 
 --listKeys :: MonadIO m => ConsulClient ->
 
@@ -57,18 +61,30 @@ data ManagedSession = ManagedSession{
   msThreadId :: ThreadId
 }
 
+withManagedSession :: MonadIO m => ConsulClient -> Int -> (Session -> m ()) -> m ()
+withManagedSession client ttl action = do
+  x <- createManagedSession client Nothing ttl
+  case x of
+    Just s -> action (msSession s) >> destroyManagedSession client s
+    Nothing -> return ()
+
 createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Int -> m (Maybe ManagedSession)
-createManagedSession client@ConsulClient{..} name ttl = do
+createManagedSession _client@ConsulClient{..} name ttl = do
   let r = SessionRequest Nothing name Nothing [] (Just Release) (Just ttl)
   s <- I.createSession ccManager ccHostname ccPort r Nothing
   mapM f s
   where
     f x = do
-      tid <- liftIO $ forkIO $ runThread client x
+      tid <- liftIO $ forkIO $ runThread x
       return $ ManagedSession x tid
 
-    runThread :: ConsulClient -> Session -> IO ()
-    runThread _client@ConsulClient{..} s = do
+    runThread :: Session -> IO ()
+    runThread s = do
       threadDelay 10
       I.renewSession ccManager ccHostname ccPort s Nothing
       return ()
+
+destroyManagedSession :: MonadIO m => ConsulClient -> ManagedSession -> m ()
+destroyManagedSession _client@ConsulClient{..} (ManagedSession session tid) = do
+  liftIO $ killThread tid
+  I.destroySession ccManager ccHostname ccPort session Nothing
