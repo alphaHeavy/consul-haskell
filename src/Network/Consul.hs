@@ -8,12 +8,18 @@ module Network.Consul (
   , destroyManagedSession
   , getKey
   , initializeConsulClient
+  , listKeys
   , putKey
+  , putKeyAcquireLock
+  , putKeyReleaseLock
   , withManagedSession
   , Consistency(..)
   , ConsulClient(..)
   , Datacenter(..)
+  , KeyValue(..)
+  , KeyValuePut(..)
   , ManagedSession(..)
+  , Session(..)
 ) where
 
 import Control.Concurrent
@@ -38,18 +44,23 @@ initializeConsulClient hostname port settings = do
 
 {- Key Value -}
 
-
 getKey :: MonadIO m => ConsulClient -> Text -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
 getKey _client@ConsulClient{..} = I.getKey ccManager ccHostname ccPort
 
---listKeys :: MonadIO m => ConsulClient ->
+listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Consistency -> Maybe Datacenter -> m [Text]
+listKeys _client@ConsulClient{..} = I.listKeys ccManager ccHostname ccPort
 
-putKey :: MonadIO m => ConsulClient -> KeyValuePut -> m Text
-putKey _client@ConsulClient{..} request = undefined -- I.putKey ccManager ccHostname ccPort request
+putKey :: MonadIO m => ConsulClient -> KeyValuePut -> Maybe Datacenter -> m Bool
+putKey _client@ConsulClient{..} = I.putKey ccManager ccHostname ccPort
 
-deleteKey :: MonadIO m => ConsulClient -> Text -> m ()
-deleteKey _client@ConsulClient{..} key = undefined --I.deleteKey ccManager ccHostname ccPort key
+putKeyAcquireLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
+putKeyAcquireLock _client@ConsulClient{..} = I.putKeyAcquireLock ccManager ccHostname ccPort
 
+putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
+putKeyReleaseLock _client@ConsulClient{..} = I.putKeyReleaseLock ccManager ccHostname ccPort
+
+deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m ()
+deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key
 
 {- Agent -}
 
