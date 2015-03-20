@@ -28,6 +28,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Traversable
 import qualified Network.Consul.Internal as I
+import Data.Word
 import Network.Consul.Types
 import Network.HTTP.Client (defaultManagerSettings, newManager, ManagerSettings)
 import Network.Socket (PortNumber)
@@ -44,10 +45,13 @@ initializeConsulClient hostname port settings = do
 
 {- Key Value -}
 
-getKey :: MonadIO m => ConsulClient -> Text -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
+getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
 getKey _client@ConsulClient{..} = I.getKey ccManager ccHostname ccPort
 
-listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Consistency -> Maybe Datacenter -> m [Text]
+getKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [KeyValue]
+getKeys _client@ConsulClient{..} = I.getKeys ccManager ccHostname ccPort
+
+listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [Text]
 listKeys _client@ConsulClient{..} = I.listKeys ccManager ccHostname ccPort
 
 putKey :: MonadIO m => ConsulClient -> KeyValuePut -> Maybe Datacenter -> m Bool
