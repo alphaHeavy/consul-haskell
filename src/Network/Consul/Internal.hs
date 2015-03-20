@@ -95,7 +95,7 @@ getKeys manager hostname portnumber key index consistency dc = do
 
 listKeys :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [Text]
 listKeys manager hostname portNumber prefix index consistency dc = do
-  initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", prefix]) fquery Nothing False dc
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", prefix]) fquery Nothing (isJust index) dc
   liftIO $ withResponse initReq manager $ \ response ->
     case responseStatus response of
       _status200 -> do
