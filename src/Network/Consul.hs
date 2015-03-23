@@ -7,6 +7,7 @@ module Network.Consul (
   , deleteKey
   , destroyManagedSession
   , getKey
+  , getKeys
   , initializeConsulClient
   , listKeys
   , putKey
@@ -25,20 +26,19 @@ module Network.Consul (
 import Control.Concurrent
 import Control.Monad.IO.Class
 import Data.Text (Text)
-import qualified Data.Text as T
 import Data.Traversable
 import qualified Network.Consul.Internal as I
 import Data.Word
 import Network.Consul.Types
-import Network.HTTP.Client (defaultManagerSettings, newManager, ManagerSettings)
+import Network.HTTP.Client (defaultManagerSettings, newManager, Manager)
 import Network.Socket (PortNumber)
 
 import Prelude hiding (mapM)
 
-initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe ManagerSettings -> m ConsulClient
-initializeConsulClient hostname port settings = do
-  manager <- liftIO $ case settings of
-                        Just x -> newManager x
+initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
+initializeConsulClient hostname port man = do
+  manager <- liftIO $ case man of
+                        Just x -> return x
                         Nothing -> newManager defaultManagerSettings
   return $ ConsulClient manager hostname port
 
