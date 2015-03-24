@@ -111,7 +111,7 @@ data RegisterHealthCheck = RegisterHealthCheck {
   rhcName :: Text,
   rhcNotes :: Text,
   rhcScript :: Maybe Text,
-  rhcInterval :: Text,
+  rhcInterval :: Maybe Text,
   rhcTtl :: Maybe Text
 }
 
