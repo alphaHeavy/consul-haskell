@@ -168,6 +168,11 @@ deleteKey manager hostname portNumber key recurse dc = do
     return ()
 
 {- Agent -}
+{-getHealthChecks :: MonadIO m => Manager -> Text -> PortNumber -> Maybe Datacenter -> m [Check]
+getHealthChecks  manager hostname portNumber dc = do
+  request <- createRequest hostname portNumber "/agent/checks" Nothing Nothing False dc
+ -}
+
 registerHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> RegisterHealthCheck -> m ()
 registerHealthCheck manager hostname (PortNum portNumber) request = do
   initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/register"]

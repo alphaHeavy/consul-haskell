@@ -72,12 +72,22 @@ testDeleteKey = testCase "testDeleteKey" $ do
   x2 <- I.getKey man "localhost" (PortNum 8500) "/testDeleteKey" Nothing Nothing Nothing
   assertEqual "testDeleteKey: Key was not deleted" Nothing x2
 
+{- Agent -}
+testRegisterService :: TestTree
+testRegisterService = testCase "testRegisterService" $ do
+  man <- manager
+  let req = RegisterService Nothing "testService" ["test"] Nothing (Right "10s")
+  I.registerService man "localhost" (PortNum 8500) req
+{-
 testRegisterHealthCheck :: TestTree
 testRegisterHealthCheck = testCase "testRegisterHealthCheck" $ do
   man <- manager
   let check = RegisterHealthCheck "testHealthCheck" "testHealthCheck" "" Nothing Nothing (Just "15s")
   x1 <- I.registerHealthCheck man "localhost" (PortNum 8500) check
-  undefined
+  undefined -}
+
+{- Health Checks -}
+--testServiceChecks :: 
 
 main :: IO ()
 main = defaultMain internalKVTests
