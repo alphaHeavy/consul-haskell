@@ -26,6 +26,7 @@ module Network.Consul.Internal (
   -- Session
   , createSession
   , destroySession
+  , getSessionInfo
   , renewSession
 
   --Catalog
@@ -252,12 +253,13 @@ createSession manager hostname portNumber request dc = do
       status200 -> do
         bodyParts <- brConsume $ responseBody response
         return $ decode $ BL.fromStrict $ B.concat bodyParts
-      _ -> return Nothing
+      x -> print x >> return Nothing
 
 destroySession :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m ()
 destroySession manager hostname portNumber (Session session _) dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/session/destroy/", session]) Nothing Nothing False dc
-  liftIO $ withResponse initReq manager $ \ response -> do
+  let req = initReq{method = "PUT"}
+  liftIO $ withResponse req manager $ \ response -> do
     return ()
 
 renewSession :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m Bool
@@ -267,6 +269,16 @@ renewSession manager hostname portNumber (Session session _) dc = do
     case responseStatus response of
       status200 -> return True
       _ -> return False
+
+getSessionInfo :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
+getSessionInfo manager hostname portNumber session dc = do
+  req <- createRequest hostname portNumber (T.concat ["/v1/session/info/",session]) Nothing Nothing False dc
+  liftIO $ withResponse req manager $ \ response -> do
+    case responseStatus response of
+      status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        return $ decode $ BL.fromStrict $ B.concat bodyParts
+      _ -> return Nothing
 
 {- Catalog -}
 getDatacenters :: MonadIO m => Manager -> Text -> PortNumber -> m [Datacenter]

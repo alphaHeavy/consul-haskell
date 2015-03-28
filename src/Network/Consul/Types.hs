@@ -13,6 +13,7 @@ module Network.Consul.Types (
   RegisterService(..),
   Session(..),
   SessionBehavior(..),
+  SessionInfo(..),
   SessionRequest(..)
 ) where
 
@@ -21,9 +22,12 @@ import Control.Monad
 import Data.Aeson
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B64
+import Data.Foldable
 import Data.Int
+import Data.Maybe
 import Data.Text(Text)
 import qualified Data.Text.Encoding as TE
+import Data.Traversable
 import Data.Word
 import Debug.Trace
 import Network.HTTP.Client (Manager)
@@ -63,7 +67,20 @@ data KeyValuePut = KeyValuePut {
 data Session = Session {
   sId :: Text,
   sCreateIndex :: Maybe Word64
-}
+} deriving (Show)
+
+data SessionInfo = SessionInfo {
+  siLockDelay :: Maybe Word64,
+  siChecks :: [Text],
+  siNode :: Text,
+  siId :: Text,
+  siBehavior :: Maybe SessionBehavior,
+  siCreateIndex :: Word64,
+  siName :: Maybe Text,
+  siTtl :: Maybe Text
+} deriving (Eq,Show)
+
+newtype SessionInfoList = SessionInfoList [SessionInfo]
 
 data SessionRequest = SessionRequest {
   srLockDelay :: Maybe Text,
@@ -71,7 +88,7 @@ data SessionRequest = SessionRequest {
   srNode :: Maybe Node,
   srChecks :: [Text],
   srBehavor :: Maybe SessionBehavior,
-  srTtl :: Maybe Int
+  srTtl :: Maybe Text
 }
 
 data RegisterRequest = RegisterRequest {
@@ -166,6 +183,19 @@ instance FromJSON Health where
 instance FromJSON Session where
   parseJSON (Object x) = Session <$> x .: "ID" <*> pure Nothing
   parseJSON _ = mzero
+
+instance FromJSON SessionInfoList where
+  parseJSON (Array x) = SessionInfoList <$> traverse parseJSON (toList x)
+  parseJSON _ = mzero
+
+instance FromJSON SessionInfo where
+  parseJSON (Object x) = SessionInfo <$> x .:? "LockDelay" <*> x .: "Checks" <*> x .: "Node" <*> x .: "ID" <*> x .:? "Behavior" <*> x .: "CreateIndex" <*> x .:? "Name" <*> x .:? "TTL"
+  --parseJSON (Object x) = SessionInfo <$> x .: "CreateIndex"
+  parseJSON _ = mzero
+
+instance FromJSON SessionBehavior where
+  parseJSON (String "release") = pure Release
+  parseJSON (String "delete") = pure Delete
 
 instance ToJSON SessionBehavior where
   toJSON Release = String "release"

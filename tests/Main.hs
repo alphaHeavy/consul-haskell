@@ -1,4 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+import Control.Concurrent
+import Data.Maybe
+import Network.Consul (createManagedSession,initializeConsulClient,ConsulClient(..))
 import Network.Consul.Types
 import qualified Network.Consul.Internal as I
 import Network.HTTP.Client
@@ -89,5 +92,69 @@ testRegisterHealthCheck = testCase "testRegisterHealthCheck" $ do
 {- Health Checks -}
 --testServiceChecks :: 
 
+{- Session -}
+testCreateSession :: TestTree
+testCreateSession = testCase "testCreateSession" $ do
+  man <- manager
+  let req = SessionRequest Nothing (Just "testCreateSession") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  result <- I.createSession man "localhost" (PortNum 8500) req Nothing
+  case result of
+    Just _ -> return ()
+    Nothing -> assertFailure "testCreateSession: No session was created"
+
+testGetSessionInfo :: TestTree
+testGetSessionInfo = testCase "testGetSessionInfo" $ do
+  man <- manager
+  let req = SessionRequest Nothing (Just "testGetSessionInfo") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  result <- I.createSession man "localhost" (PortNum 8500) req Nothing
+  case result of
+    Just x -> do
+      x1 <- I.getSessionInfo man "localhost" (PortNum 8500) (sId x) Nothing
+      case x1 of
+        Just _ -> return ()
+        Nothing -> assertFailure "testGetSessionInfo: Session Info was not returned"
+    Nothing -> assertFailure "testGetSessionInfo: No session was created"
+
+testRenewSession :: TestTree
+testRenewSession = testCase "testRenewSession" $ do
+  man <- manager
+  let req = SessionRequest Nothing (Just "testRenewSession") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  result <- I.createSession man "localhost" (PortNum 8500) req Nothing
+  case result of
+    Just x -> do
+      x1 <- I.renewSession man "localhost" (PortNum 8500) x Nothing
+      case x1 of
+        True -> return ()
+        False -> assertFailure "testRenewSession: Session was not renewed"
+    Nothing -> assertFailure "testRenewSession: No session was created"
+
+testDestroySession :: TestTree
+testDestroySession = testCase "testDestroySession" $ do
+  man <- manager
+  let req = SessionRequest Nothing (Just "testDestroySession") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  result <- I.createSession man "localhost" (PortNum 8500) req Nothing
+  case result of
+    Just x -> do
+      _ <- I.destroySession man "localhost" (PortNum 8500) x Nothing
+      x1 <- I.getSessionInfo man "localhost" (PortNum 8500) (sId x) Nothing
+      assertEqual "testDestroySession: Session info was returned after destruction" Nothing x1
+    Nothing -> assertFailure "testDestroySession: No session was created"
+
+testInternalSession :: TestTree
+testInternalSession = testGroup "Internal Session Tests" [testCreateSession, testGetSessionInfo, testRenewSession, testDestroySession]
+
+{- Managed Session -}
+testCreateManagedSession :: TestTree
+testCreateManagedSession = testCase "testCreateManagedSession" $ do
+  client <- initializeConsulClient "localhost" (PortNum 8500) Nothing
+  x <- createManagedSession client (Just "testCreateManagedSession") "60s"
+  assertEqual "testCreateManagedSession: Session not created" True (isJust x)
+
+managedSessionTests :: TestTree
+managedSessionTests = testGroup "Managed Session Tests" [ testCreateManagedSession]
+
+allTests :: TestTree
+allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests]
+
 main :: IO ()
-main = defaultMain internalKVTests
+main = defaultMain allTests

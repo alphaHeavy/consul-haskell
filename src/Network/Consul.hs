@@ -26,12 +26,15 @@ module Network.Consul (
 import Control.Concurrent
 import Control.Monad.IO.Class
 import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.Read as TR
 import Data.Traversable
-import qualified Network.Consul.Internal as I
 import Data.Word
+import qualified Network.Consul.Internal as I
 import Network.Consul.Types
 import Network.HTTP.Client (defaultManagerSettings, newManager, Manager)
 import Network.Socket (PortNumber)
+
 
 import Prelude hiding (mapM)
 
@@ -76,14 +79,14 @@ data ManagedSession = ManagedSession{
   msThreadId :: ThreadId
 }
 
-withManagedSession :: MonadIO m => ConsulClient -> Int -> (Session -> m ()) -> m ()
+withManagedSession :: MonadIO m => ConsulClient -> Text -> (Session -> m ()) -> m ()
 withManagedSession client ttl action = do
   x <- createManagedSession client Nothing ttl
   case x of
     Just s -> action (msSession s) >> destroyManagedSession client s
     Nothing -> return ()
 
-createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Int -> m (Maybe ManagedSession)
+createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Text -> m (Maybe ManagedSession)
 createManagedSession _client@ConsulClient{..} name ttl = do
   let r = SessionRequest Nothing name Nothing [] (Just Release) (Just ttl)
   s <- I.createSession ccManager ccHostname ccPort r Nothing
@@ -93,9 +96,11 @@ createManagedSession _client@ConsulClient{..} name ttl = do
       tid <- liftIO $ forkIO $ runThread x
       return $ ManagedSession x tid
 
+    saneTtl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
+
     runThread :: Session -> IO ()
     runThread s = do
-      threadDelay 10
+      threadDelay (saneTtl - (saneTtl - 10))
       I.renewSession ccManager ccHostname ccPort s Nothing
       return ()
 
