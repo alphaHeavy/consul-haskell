@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Control.Concurrent
 import Data.Maybe
-import Network.Consul (createManagedSession,initializeConsulClient,ConsulClient(..))
+import Network.Consul (createManagedSession,getSessionInfo,initializeConsulClient,ConsulClient(..),ManagedSession(..))
 import Network.Consul.Types
 import qualified Network.Consul.Internal as I
 import Network.HTTP.Client
@@ -150,8 +150,20 @@ testCreateManagedSession = testCase "testCreateManagedSession" $ do
   x <- createManagedSession client (Just "testCreateManagedSession") "60s"
   assertEqual "testCreateManagedSession: Session not created" True (isJust x)
 
+testSessionMaintained :: TestTree
+testSessionMaintained = testCase "testSessionMaintained" $ do
+  client <- initializeConsulClient "localhost" (PortNum 8500) Nothing
+  x <- createManagedSession client (Just "testCreateManagedSession") "10s"
+  assertEqual "testSessionMaintained: Session not created" True (isJust x)
+  let (Just foo) = x
+  threadDelay (12 * 1000000)
+  y <- getSessionInfo client (sId $ msSession foo) Nothing
+  assertEqual "testSessionMaintained: Session not found" True (isJust y)
+  print y
+
+
 managedSessionTests :: TestTree
-managedSessionTests = testGroup "Managed Session Tests" [ testCreateManagedSession]
+managedSessionTests = testGroup "Managed Session Tests" [ testCreateManagedSession, testSessionMaintained]
 
 allTests :: TestTree
 allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests]

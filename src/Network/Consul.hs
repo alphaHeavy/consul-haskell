@@ -8,6 +8,7 @@ module Network.Consul (
   , destroyManagedSession
   , getKey
   , getKeys
+  , getSessionInfo
   , initializeConsulClient
   , listKeys
   , putKey
@@ -70,6 +71,10 @@ deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m 
 deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key
 
 {- Agent -}
+
+{- Session -}
+getSessionInfo :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
+getSessionInfo _client@ConsulClient{..} = I.getSessionInfo ccManager ccHostname ccPort
 
 {- Helper Functions -}
 
