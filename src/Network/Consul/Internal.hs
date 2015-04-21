@@ -265,7 +265,8 @@ destroySession manager hostname portNumber (Session session _) dc = do
 renewSession :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m Bool
 renewSession manager hostname portNumber (Session session _) dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/session/renew/", session]) Nothing Nothing False dc
-  liftIO $ withResponse initReq manager $ \ response -> do
+  let req = initReq{method = "PUT"}
+  liftIO $ withResponse req manager $ \ response -> do
     case responseStatus response of
       status200 -> return True
       _ -> return False
