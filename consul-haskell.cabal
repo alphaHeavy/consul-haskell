@@ -35,9 +35,12 @@ library
     base64-bytestring,
     bytestring,
     http-client,
+    lifted-base,
+    monad-control,
     network,
     text,
-    transformers
+    transformers,
+    stm
   ghc-options:
     -Wall
 
