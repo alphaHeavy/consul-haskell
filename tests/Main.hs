@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Control.Concurrent
+import Control.Monad.IO.Class
 import Data.Maybe
-import Network.Consul (createManagedSession,getSessionInfo,initializeConsulClient,ConsulClient(..),ManagedSession(..))
+import Data.Text (Text)
+import Network.Consul (createManagedSession,getSessionInfo,initializeConsulClient,withSession,ConsulClient(..),ManagedSession(..))
 import Network.Consul.Types
 import qualified Network.Consul.Internal as I
 import Network.HTTP.Client
@@ -159,11 +161,28 @@ testSessionMaintained = testCase "testSessionMaintained" $ do
   threadDelay (12 * 1000000)
   y <- getSessionInfo client (sId $ msSession foo) Nothing
   assertEqual "testSessionMaintained: Session not found" True (isJust y)
-  print y
+
+testWithSessionCancel :: TestTree
+testWithSessionCancel = testCase "testWithSessionCancel" $ do
+  man <- manager
+  client <- initializeConsulClient "localhost" (PortNum 8500) Nothing
+  let req = SessionRequest Nothing (Just "testWithSessionCancel") Nothing ["serfHealth"] (Just Release) (Just "10s")
+  result <- I.createSession man "localhost" (PortNum 8500) req Nothing
+  case result of
+    Just x -> do
+      x1 <- withSession client x (action x man) cancelAction
+      assertEqual "testWithSessionCancel: Incorrect value" "Canceled" x1
+    Nothing -> assertFailure "testWithSessionCancel: No session was created"
+  where
+    action x man = do
+      I.destroySession man "localhost" (PortNum 8500) x Nothing
+      threadDelay (30 * 1000000)
+      return ("NotCanceled" :: Text)
+    cancelAction = return ("Canceled" :: Text)
 
 
 managedSessionTests :: TestTree
-managedSessionTests = testGroup "Managed Session Tests" [ testCreateManagedSession, testSessionMaintained]
+managedSessionTests = testGroup "Managed Session Tests" [ testCreateManagedSession, testSessionMaintained, testWithSessionCancel]
 
 allTests :: TestTree
 allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests]

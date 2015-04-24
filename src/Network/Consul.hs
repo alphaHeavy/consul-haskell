@@ -106,12 +106,11 @@ withSession client session action lostAction = do
       tid <- liftIO $ atomically $ readTMVar tidVar
       killThread tid
       empty <- liftIO $ atomically $ isEmptyTMVar resultVar
-      if not empty then do
+      if empty then do
         result <- lostAction
         liftIO $ atomically $ putTMVar resultVar result
         return ()
         else return ()
-        
 
 {- Helper Functions -}
 
