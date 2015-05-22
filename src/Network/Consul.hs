@@ -10,7 +10,9 @@ module Network.Consul (
   , getKey
   , getKeys
   , getSessionInfo
+  , getSequencerForLock
   , initializeConsulClient
+  , isValidSequencer
   , listKeys
   , putKey
   , putKeyAcquireLock
@@ -111,6 +113,22 @@ withSession client session action lostAction = do
         liftIO $ atomically $ putTMVar resultVar result
         return ()
         else return ()
+
+getSequencerForLock :: MonadIO m => ConsulClient -> Text -> Session -> Maybe Datacenter -> m (Maybe Sequencer)
+getSequencerForLock client key session datacenter = do
+  kv <- getKey client key Nothing (Just Consistent) datacenter
+  case kv of
+    Just k -> do
+      let isValid = maybe False ((sId session) ==) $ kvSession k
+      if isValid then return $ Just $ Sequencer key (kvLockIndex k) session else return Nothing
+    Nothing -> return Nothing
+
+isValidSequencer :: MonadIO m => ConsulClient -> Sequencer -> Maybe Datacenter -> m Bool
+isValidSequencer client sequencer datacenter = do
+  mkv <- getKey client (sKey sequencer) Nothing (Just Consistent) datacenter
+  case mkv of
+    Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
+    Nothing -> return False
 
 {- Helper Functions -}
 

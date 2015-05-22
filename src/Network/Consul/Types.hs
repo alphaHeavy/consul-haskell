@@ -14,7 +14,8 @@ module Network.Consul.Types (
   Session(..),
   SessionBehavior(..),
   SessionInfo(..),
-  SessionRequest(..)
+  SessionRequest(..),
+  Sequencer(..)
 ) where
 
 import Control.Applicative
@@ -89,6 +90,12 @@ data SessionRequest = SessionRequest {
   srChecks :: [Text],
   srBehavor :: Maybe SessionBehavior,
   srTtl :: Maybe Text
+}
+
+data Sequencer = Sequencer{
+  sKey :: Text,
+  sLockIndex :: Word64,
+  sSession :: Session
 }
 
 data RegisterRequest = RegisterRequest {
