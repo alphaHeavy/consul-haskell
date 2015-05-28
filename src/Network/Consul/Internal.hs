@@ -14,6 +14,7 @@ module Network.Consul.Internal (
   , deregisterHealthCheck
   , deregisterService
   , failHealthCheck
+  , getSelf
   , passHealthCheck
   , registerHealthCheck
   , registerService
@@ -225,6 +226,14 @@ deregisterService manager hostname (PortNum portNumber) service = do
   liftIO $ withResponse initReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
     return ()
+
+getSelf :: MonadIO m => Manager -> Text -> PortNumber -> m (Maybe Self)
+getSelf manager hostname (PortNum portNumber) = do
+  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/agent/self"]
+  liftIO $ withResponse initReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ decode $ BL.fromStrict body
 
 
 {- Health -}

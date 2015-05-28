@@ -83,6 +83,13 @@ testRegisterService = testCase "testRegisterService" $ do
   man <- manager
   let req = RegisterService Nothing "testService" ["test"] Nothing (Right "10s")
   I.registerService man "localhost" (PortNum 8500) req
+
+testGetSelf :: TestTree
+testGetSelf = testCase "testGetSelf" $ do
+  man <- manager
+  x <- I.getSelf man "localhost" (PortNum 8500)
+  assertEqual "testGetSelf: Self not returned" True (isJust x)
+
 {-
 testRegisterHealthCheck :: TestTree
 testRegisterHealthCheck = testCase "testRegisterHealthCheck" $ do
@@ -170,7 +177,7 @@ testWithSessionCancel = testCase "testWithSessionCancel" $ do
   result <- I.createSession man "localhost" (PortNum 8500) req Nothing
   case result of
     Just x -> do
-      x1 <- withSession client x (action x man) cancelAction
+      x1 <- withSession client x (\ y -> action y man ) cancelAction
       assertEqual "testWithSessionCancel: Incorrect value" "Canceled" x1
     Nothing -> assertFailure "testWithSessionCancel: No session was created"
   where
@@ -184,8 +191,11 @@ testWithSessionCancel = testCase "testWithSessionCancel" $ do
 managedSessionTests :: TestTree
 managedSessionTests = testGroup "Managed Session Tests" [ testCreateManagedSession, testSessionMaintained, testWithSessionCancel]
 
+agentTests :: TestTree
+agentTests = testGroup "Agent Tests" [testGetSelf]
+
 allTests :: TestTree
-allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests]
+allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests, agentTests]
 
 main :: IO ()
 main = defaultMain allTests
