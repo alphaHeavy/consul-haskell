@@ -2,15 +2,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Network.Consul.Types (
   Check(..),
+  Config(..),
   Consistency(..),
   ConsulClient(..),
   Datacenter (..),
   Health(..),
   KeyValue(..),
   KeyValuePut(..),
+  Member(..),
   RegisterRequest(..),
   RegisterHealthCheck(..),
   RegisterService(..),
+  Self(..),
   Session(..),
   SessionBehavior(..),
   SessionInfo(..),
@@ -21,6 +24,7 @@ module Network.Consul.Types (
 import Control.Applicative
 import Control.Monad
 import Data.Aeson
+import Data.Aeson.Types (Pair(..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B64
 import Data.Foldable
@@ -147,6 +151,32 @@ data RegisterService = RegisterService {
   rsCheck :: Either (Text,Text) Text -- (script,interval) ttl
 }
 
+data Self = Self{
+  sMember :: Member
+} deriving (Show)
+
+data Config = Config{
+  cBootstrap :: Bool,
+  cServer :: Bool,
+  cDatacenter :: Datacenter,
+  cDataDir :: Text,
+  cClientAddr :: Text
+}
+
+data Member = Member{
+  mName :: Text,
+  mAddress :: Text,
+  mPort :: Int ,
+  mTags :: Object,
+  mStatus :: Int,
+  mProtocolMin :: Int,
+  mProtocolMax :: Int,
+  mProtocolCur :: Int,
+  mDelegateMin :: Int,
+  mDelegateMax :: Int,
+  mDelegateCur :: Int
+} deriving (Show)
+
 {- Health -}
 data Health = Health {
   hNode :: Node,
@@ -156,6 +186,17 @@ data Health = Health {
 
 
 {- JSON Instances -}
+instance FromJSON Self where
+  parseJSON (Object v) = Self <$> v .: "Member"
+
+instance FromJSON Config where
+  parseJSON (Object v) = Config <$> v .: "Bootstrap" <*> v .: "Server" <*> v .: "Datacenter" <*> v .: "DataDir" <*> v .: "ClientAddr"
+  parseJSON _ = mzero
+
+instance FromJSON Member where
+  parseJSON (Object v) = Member <$> v .: "Name" <*> v .: "Addr" <*> v .: "Port" <*> v .: "Tags" <*> v .: "Status" <*> v .: "ProtocolMin" <*> v .: "ProtocolMax" <*> v .: "ProtocolCur" <*> v .: "DelegateMin" <*> v .: "DelegateMax" <*> v .: "DelegateCur"
+  parseJSON _ = mzero
+
 instance FromJSON HealthCheckStatus where
   parseJSON (String "Critical") = pure Critical
   parseJSON (String "Passing") = pure Passing
@@ -197,7 +238,6 @@ instance FromJSON SessionInfoList where
 
 instance FromJSON SessionInfo where
   parseJSON (Object x) = SessionInfo <$> x .:? "LockDelay" <*> x .: "Checks" <*> x .: "Node" <*> x .: "ID" <*> x .:? "Behavior" <*> x .: "CreateIndex" <*> x .:? "Name" <*> x .:? "TTL"
-  --parseJSON (Object x) = SessionInfo <$> x .: "CreateIndex"
   parseJSON _ = mzero
 
 instance FromJSON SessionBehavior where

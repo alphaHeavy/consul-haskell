@@ -35,6 +35,7 @@ library
     base64-bytestring,
     bytestring,
     http-client,
+    lifted-async,
     lifted-base,
     monad-control,
     network,

@@ -9,6 +9,7 @@ module Network.Consul (
   , destroyManagedSession
   , getKey
   , getKeys
+  , getSelf
   , getSessionInfo
   , getSequencerForLock
   , initializeConsulClient
@@ -18,6 +19,7 @@ module Network.Consul (
   , putKeyAcquireLock
   , putKeyReleaseLock
   , withManagedSession
+  , withSequencer
   , withSession
   , Consistency(..)
   , ConsulClient(..)
@@ -29,6 +31,7 @@ module Network.Consul (
 ) where
 
 import Control.Concurrent hiding (killThread)
+import Control.Concurrent.Async.Lifted
 import Control.Concurrent.Lifted (fork, killThread)
 import Control.Concurrent.STM
 import Control.Monad.IO.Class
@@ -78,17 +81,19 @@ deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m 
 deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key
 
 {- Agent -}
+getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
+getSelf _client@ConsulClient{..} = I.getSelf ccManager ccHostname ccPort
 
 {- Session -}
 getSessionInfo :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
 getSessionInfo _client@ConsulClient{..} = I.getSessionInfo ccManager ccHostname ccPort
 
-withSession :: forall a m. (MonadIO m,MonadBaseControl IO m) => ConsulClient -> Session -> m a -> m a -> m a
+withSession :: forall a m. (MonadIO m,MonadBaseControl IO m) => ConsulClient -> Session -> (Session -> m a) -> m a -> m a
 withSession client session action lostAction = do
   var <- liftIO $ newEmptyTMVarIO
   tidVar <- liftIO $ newEmptyTMVarIO
   stid <- fork $ runThread var tidVar
-  tid <- fork $ action >>= \ x -> liftIO $ atomically $ putTMVar var x
+  tid <- fork $ action session >>= \ x -> liftIO $ atomically $ putTMVar var x
   liftIO $ atomically $ putTMVar tidVar tid
   ret <- liftIO $ atomically $ takeTMVar var
   killThread stid
@@ -130,20 +135,32 @@ isValidSequencer client sequencer datacenter = do
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
 
-{- Helper Functions -}
+withSequencer :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
+withSequencer client sequencer action lostAction delay dc = do
+  mainFunc <- async action
+  pulseFunc <- async pulseLock
+  waitAny [mainFunc, pulseFunc] >>= return . snd
+  where
+    pulseLock = do
+      liftIO $ threadDelay delay
+      valid <- isValidSequencer client sequencer dc
+      case valid of
+        True -> pulseLock
+        False -> lostAction
 
+{- Helper Functions -}
 {- ManagedSession is a session with an associated TTL healthcheck so the session will be terminated if the client dies. The healthcheck will be automatically updated. -}
 data ManagedSession = ManagedSession{
   msSession :: Session,
   msThreadId :: ThreadId
 }
 
-withManagedSession :: MonadIO m => ConsulClient -> Text -> (Session -> m ()) -> m () -> m ()
+withManagedSession :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> Text -> (Session -> m ()) -> m () -> m ()
 withManagedSession client ttl action lostAction = do
   x <- createManagedSession client Nothing ttl
   case x of
-    Just s -> action (msSession s) >> destroyManagedSession client s
-    Nothing -> lostAction >> return ()
+    Just s -> withSession client (msSession s) action lostAction >> destroyManagedSession client s
+    Nothing -> lostAction
 
 createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Text -> m (Maybe ManagedSession)
 createManagedSession _client@ConsulClient{..} name ttl = do
@@ -154,7 +171,7 @@ createManagedSession _client@ConsulClient{..} name ttl = do
     f x = do
       tid <- liftIO $ forkIO $ runThread x
       return $ ManagedSession x tid
-    
+
     saneTtl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
 
     runThread :: Session -> IO ()
