@@ -46,6 +46,7 @@ import qualified Data.Text.Encoding as TE
 import Data.Word
 import Network.Consul.Types
 import Network.HTTP.Client
+import Network.HTTP.Types
 import Network.Socket (PortNumber(..))
 
 createRequest :: MonadIO m => Text -> PortNumber -> Text -> Maybe Text -> Maybe ByteString -> Bool -> Maybe Datacenter -> m Request
@@ -67,7 +68,7 @@ getKey manager hostname portnumber key index consistency dc = do
   request <- createRequest hostname portnumber (T.concat ["/v1/kv/",key]) fquery Nothing (isJust index) dc
   liftIO $ withResponse request manager $ \ response -> do
     case responseStatus response of
-      _status200 -> do
+      x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         let body = B.concat bodyParts
         return $ listToMaybe =<< (decode $ BL.fromStrict body)
@@ -83,7 +84,7 @@ getKeys manager hostname portnumber key index consistency dc = do
   request <- createRequest hostname portnumber (T.concat ["/v1/kv/",key]) fquery Nothing (isJust index) dc
   liftIO $ withResponse request manager $ \ response -> do
     case responseStatus response of
-      _status200 -> do
+      x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         let body = B.concat bodyParts
         return $ maybe [] id $ decode $ BL.fromStrict body
@@ -100,7 +101,7 @@ listKeys manager hostname portNumber prefix index consistency dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", prefix]) fquery Nothing (isJust index) dc
   liftIO $ withResponse initReq manager $ \ response ->
     case responseStatus response of
-      _status200 -> do
+      x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         let body = B.concat bodyParts
         return $ maybe [] id $ decode $ BL.fromStrict body
@@ -217,7 +218,7 @@ registerService manager hostname portNumber request dc = do
   initReq <- createRequest hostname portNumber "/v1/agent/service/register" Nothing (Just $ BL.toStrict $ encode request) False dc
   liftIO $ withResponse initReq manager $ \ response -> do
     case responseStatus response of
-      status200 -> return True
+      x | x == status200 -> return True
       _ -> return False
 
 deregisterService :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
@@ -259,17 +260,16 @@ createSession manager hostname portNumber request dc = do
   initReq <- createRequest hostname portNumber "/v1/session/create" Nothing (Just $ BL.toStrict $ encode request) False dc
   liftIO $ withResponse initReq manager $ \ response -> do
     case responseStatus response of
-      status200 -> do
+      x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         return $ decode $ BL.fromStrict $ B.concat bodyParts
-      x -> return Nothing
+      _ -> return Nothing
 
 destroySession :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m ()
 destroySession manager hostname portNumber (Session session _) dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/session/destroy/", session]) Nothing Nothing False dc
   let req = initReq{method = "PUT"}
-  liftIO $ withResponse req manager $ \ response -> do
-    return ()
+  liftIO $ withResponse req manager $ \ _response -> return ()
 
 renewSession :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m Bool
 renewSession manager hostname portNumber (Session session _) dc = do
@@ -277,7 +277,7 @@ renewSession manager hostname portNumber (Session session _) dc = do
   let req = initReq{method = "PUT"}
   liftIO $ withResponse req manager $ \ response -> do
     case responseStatus response of
-      status200 -> return True
+      x | x == status200 -> return True
       _ -> return False
 
 getSessionInfo :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
@@ -285,7 +285,7 @@ getSessionInfo manager hostname portNumber session dc = do
   req <- createRequest hostname portNumber (T.concat ["/v1/session/info/",session]) Nothing Nothing False dc
   liftIO $ withResponse req manager $ \ response -> do
     case responseStatus response of
-      status200 -> do
+      x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         return $ decode $ BL.fromStrict $ B.concat bodyParts
       _ -> return Nothing

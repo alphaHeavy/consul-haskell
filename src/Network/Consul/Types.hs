@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Consul.Types (
   Check(..),
   Config(..),
@@ -11,10 +12,12 @@ module Network.Consul.Types (
   KeyValue(..),
   KeyValuePut(..),
   Member(..),
+  Node(..),
   RegisterRequest(..),
   RegisterHealthCheck(..),
   RegisterService(..),
   Self(..),
+  Service(..),
   Session(..),
   SessionBehavior(..),
   SessionInfo(..),
@@ -22,18 +25,14 @@ module Network.Consul.Types (
   Sequencer(..)
 ) where
 
-import Control.Applicative
 import Control.Monad
 import Data.Aeson
-import Data.Aeson.Types (Pair(..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B64
 import Data.Foldable
 import Data.Int
-import Data.Maybe
 import Data.Text(Text)
 import qualified Data.Text.Encoding as TE
-import Data.Traversable
 import Data.Word
 import Debug.Trace
 import Network.HTTP.Client (Manager)
@@ -191,6 +190,7 @@ data Health = Health {
 {- JSON Instances -}
 instance FromJSON Self where
   parseJSON (Object v) = Self <$> v .: "Member"
+  parseJSON _ = mzero
 
 instance FromJSON Config where
   parseJSON (Object v) = Config <$> v .: "Bootstrap" <*> v .: "Server" <*> v .: "Datacenter" <*> v .: "DataDir" <*> v .: "ClientAddr"
@@ -246,16 +246,17 @@ instance FromJSON SessionInfo where
 instance FromJSON SessionBehavior where
   parseJSON (String "release") = pure Release
   parseJSON (String "delete") = pure Delete
+  parseJSON _ = mzero
 
 instance ToJSON SessionBehavior where
   toJSON Release = String "release"
   toJSON Delete = String "delete"
 
 instance ToJSON RegisterHealthCheck where
-  toJSON (RegisterHealthCheck id name notes script interval ttl) = object ["id" .= id, "name" .= name, "notes" .= notes, "script" .= script, "interval" .= interval, "ttl" .= ttl]
+  toJSON (RegisterHealthCheck i name notes script interval ttl) = object ["id" .= i, "name" .= name, "notes" .= notes, "script" .= script, "interval" .= interval, "ttl" .= ttl]
 
 instance ToJSON RegisterService where
-  toJSON (RegisterService id name tags port check) = object ["ID" .= id, "Name" .= name, "Tags" .= tags, "Port" .= port, "Check" .= check]
+  toJSON (RegisterService i name tags port check) = object ["ID" .= i, "Name" .= name, "Tags" .= tags, "Port" .= port, "Check" .= check]
 
 instance ToJSON HealthCheck where
   toJSON (Ttl x) = object ["TTL" .= x]
