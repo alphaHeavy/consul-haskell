@@ -81,8 +81,9 @@ testDeleteKey = testCase "testDeleteKey" $ do
 testRegisterService :: TestTree
 testRegisterService = testCase "testRegisterService" $ do
   man <- manager
-  let req = RegisterService Nothing "testService" ["test"] Nothing (Right "10s")
-  I.registerService man "localhost" (PortNum 8500) req
+  let req = RegisterService Nothing "testService" ["test"] Nothing (Just $ Ttl "10s")
+  val <- I.registerService man "localhost" (PortNum 8500) req Nothing
+  assertEqual "testRegisterService: Service was not created" val True
 
 testGetSelf :: TestTree
 testGetSelf = testCase "testGetSelf" $ do
@@ -192,7 +193,7 @@ managedSessionTests :: TestTree
 managedSessionTests = testGroup "Managed Session Tests" [ testCreateManagedSession, testSessionMaintained, testWithSessionCancel]
 
 agentTests :: TestTree
-agentTests = testGroup "Agent Tests" [testGetSelf]
+agentTests = testGroup "Agent Tests" [testGetSelf,testRegisterService]
 
 allTests :: TestTree
 allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests, agentTests]

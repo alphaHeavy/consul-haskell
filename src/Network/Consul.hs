@@ -18,6 +18,7 @@ module Network.Consul (
   , putKey
   , putKeyAcquireLock
   , putKeyReleaseLock
+  , registerService
   , withManagedSession
   , withSequencer
   , withSession
@@ -31,7 +32,7 @@ module Network.Consul (
 ) where
 
 import Control.Concurrent hiding (killThread)
-import Control.Concurrent.Async.Lifted
+import Control.Concurrent.Async.Lifted hiding (cancel)
 import Control.Concurrent.Lifted (fork, killThread)
 import Control.Concurrent.STM
 import Control.Monad.IO.Class
@@ -83,6 +84,9 @@ deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort
 {- Agent -}
 getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
 getSelf _client@ConsulClient{..} = I.getSelf ccManager ccHostname ccPort
+
+registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
+registerService _client@ConsulClient{..} = I.registerService ccManager ccHostname ccPort
 
 {- Session -}
 getSessionInfo :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])

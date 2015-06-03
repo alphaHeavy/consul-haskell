@@ -212,13 +212,13 @@ failHealthCheck manager hostname (PortNum portNumber) checkId = do
     _bodyParts <- brConsume $ responseBody response
     return ()
 
-registerService :: MonadIO m => Manager -> Text -> PortNumber -> RegisterService -> m ()
-registerService manager hostname (PortNum portNumber) request = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/agent/service/register"]
-  let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ BL.toStrict $ encode request}
-  liftIO $ withResponse httpReq manager $ \ response -> do
-    _bodyParts <- brConsume $ responseBody response
-    return ()
+registerService :: MonadIO m => Manager -> Text -> PortNumber -> RegisterService -> Maybe Datacenter -> m Bool
+registerService manager hostname portNumber request dc = do
+  initReq <- createRequest hostname portNumber "/v1/agent/service/register" Nothing (Just $ BL.toStrict $ encode request) False dc
+  liftIO $ withResponse initReq manager $ \ response -> do
+    case responseStatus response of
+      status200 -> return True
+      _ -> return False
 
 deregisterService :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
 deregisterService manager hostname (PortNum portNumber) service = do
@@ -262,7 +262,7 @@ createSession manager hostname portNumber request dc = do
       status200 -> do
         bodyParts <- brConsume $ responseBody response
         return $ decode $ BL.fromStrict $ B.concat bodyParts
-      x -> print x >> return Nothing
+      x -> return Nothing
 
 destroySession :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m ()
 destroySession manager hostname portNumber (Session session _) dc = do

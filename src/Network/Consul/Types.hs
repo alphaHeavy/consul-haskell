@@ -7,6 +7,7 @@ module Network.Consul.Types (
   ConsulClient(..),
   Datacenter (..),
   Health(..),
+  HealthCheck(..),
   KeyValue(..),
   KeyValuePut(..),
   Member(..),
@@ -51,6 +52,8 @@ data Consistency = Consistent | Default | Stale deriving (Eq,Show,Enum,Ord)
 data HealthCheckStatus = Critical | Passing | Unknown | Warning deriving (Eq,Show,Enum,Ord)
 
 data SessionBehavior = Release | Delete deriving (Eq,Show,Enum,Ord)
+
+data HealthCheck = Script Text Text | Ttl Text | Http Text deriving (Eq,Show,Ord)
 
 data KeyValue = KeyValue {
   kvCreateIndex :: Word64,
@@ -148,7 +151,7 @@ data RegisterService = RegisterService {
   rsName :: Text,
   rsTags :: [Text],
   rsPort :: Maybe Int16,
-  rsCheck :: Either (Text,Text) Text -- (script,interval) ttl
+  rsCheck :: Maybe HealthCheck
 }
 
 data Self = Self{
@@ -253,6 +256,11 @@ instance ToJSON RegisterHealthCheck where
 
 instance ToJSON RegisterService where
   toJSON (RegisterService id name tags port check) = object ["ID" .= id, "Name" .= name, "Tags" .= tags, "Port" .= port, "Check" .= check]
+
+instance ToJSON HealthCheck where
+  toJSON (Ttl x) = object ["TTL" .= x]
+  toJSON (Http x) = object ["HTTP" .= x]
+  toJSON (Script x y) = object ["Script" .= x, "Interval" .= y]
 
 instance ToJSON SessionRequest where
   toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (fmap nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
