@@ -44,7 +44,7 @@ library
     transformers,
     stm
   ghc-options:
-    -Wall -Werror
+    -Wall
 
 test-suite consul-haskell-test
   default-language:
