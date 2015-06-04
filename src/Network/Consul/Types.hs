@@ -24,7 +24,9 @@ module Network.Consul.Types (
   SessionRequest(..),
   Sequencer(..)
 ) where
-
+#ifdef __GLASGOW_HASKELL__ <710
+import Control.Applicative
+#endif
 import Control.Monad
 import Data.Aeson
 import Data.ByteString (ByteString)
