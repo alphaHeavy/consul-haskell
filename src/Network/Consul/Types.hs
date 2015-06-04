@@ -26,6 +26,7 @@ module Network.Consul.Types (
 ) where
 #ifdef __GLASGOW_HASKELL__ <710
 import Control.Applicative
+import Data.Traversable
 #endif
 import Control.Monad
 import Data.Aeson
