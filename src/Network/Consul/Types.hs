@@ -19,6 +19,7 @@ module Network.Consul.Types (
   RegisterService(..),
   Self(..),
   Service(..),
+  ServiceResult(..),
   Session(..),
   SessionBehavior(..),
   SessionInfo(..),
@@ -121,6 +122,16 @@ data Service = Service {
   seService :: Text,
   seTags :: [Text],
   sePort :: Maybe Int
+}
+
+data ServiceResult = ServiceResult{
+  srrNode :: Text,
+  srrAddress :: Text,
+  srrServiceId :: Text,
+  srrServiceName :: Text,
+  srrServiceTags :: [Text],
+  srrServiceAddress :: Maybe Text,
+  srrServicePort :: Maybe Int
 }
 
 data Check = Check {
@@ -273,6 +284,13 @@ instance ToJSON SessionRequest where
 instance ToJSON (Either (Text,Text) Text) where
   toJSON (Left (script,interval)) = object ["Script" .= script, "Interval" .= interval]
   toJSON (Right ttl) = object ["TTL" .= ttl]
+
+instance ToJSON ServiceResult where
+  toJSON (ServiceResult node addr sId sName sTags sAddress sPort) = object["Node" .= node, "Address" .= addr, "ServiceID" .= sId, "ServiceName" .= sName, "ServiceTags" .= sTags, "ServiceAddress" .= sAddress, "ServicePort" .= sPort]
+
+instance FromJSON ServiceResult where
+  parseJSON (Object x) = ServiceResult <$> x .: "Node" <*> x .: "Address" <*> x .: "ServiceID" <*> x .: "ServiceName" <*> x .: "ServiceTags" <*> x .:? "ServiceAddress" <*> x .:? "ServicePort"
+  parseJSON _ = mzero
 
 foo :: Monad m => Either String a -> m a
 foo (Left x) = trace "failing" $ fail x

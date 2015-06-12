@@ -32,6 +32,7 @@ module Network.Consul.Internal (
 
   --Catalog
   , getDatacenters
+  , getService
   ) where
 
 import Control.Monad.IO.Class
@@ -192,9 +193,9 @@ deregisterHealthCheck manager hostname (PortNum portNumber) checkId = do
     return ()
 
 
-passHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
-passHealthCheck manager hostname (PortNum portNumber) checkId = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/pass/", checkId]
+passHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m ()
+passHealthCheck manager hostname portNumber checkId dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/pass/", checkId]) Nothing Nothing False dc
   liftIO $ withResponse initReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
     return ()
@@ -302,3 +303,9 @@ getDatacenters manager hostname (PortNum portNumber) = liftIO $ do
       Just x -> return x
       Nothing -> return []
 
+getService :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
+getService manager hostname portNumber name tag dc = do
+  req <- createRequest hostname portNumber (T.concat["/v1/catalog/service/",name]) (fmap (\ x -> T.concat ["tag=",x]) tag) Nothing False dc
+  liftIO $ withResponse req manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    return $ decode $ BL.fromStrict $ B.concat bodyParts

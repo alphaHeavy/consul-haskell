@@ -10,29 +10,27 @@ module Network.Consul (
   , getKey
   , getKeys
   , getSelf
+  , getService
   , getSessionInfo
   , getSequencerForLock
   , initializeConsulClient
   , isValidSequencer
   , listKeys
+  , ManagedSession (..)
+  , passHealthCheck
   , putKey
   , putKeyAcquireLock
   , putKeyReleaseLock
   , registerService
+  , runService
   , withManagedSession
   , withSequencer
   , withSession
-  , Consistency(..)
-  , ConsulClient(..)
-  , Datacenter(..)
-  , KeyValue(..)
-  , KeyValuePut(..)
-  , ManagedSession(..)
-  , Session(..)
+  , module Network.Consul.Types
 ) where
 
 import Control.Concurrent hiding (killThread)
-import Control.Concurrent.Async.Lifted hiding (cancel)
+import Control.Concurrent.Async.Lifted
 import Control.Concurrent.Lifted (fork, killThread)
 import Control.Concurrent.STM
 import Control.Monad.IO.Class
@@ -50,6 +48,9 @@ import Network.Socket (PortNumber)
 
 import Prelude hiding (mapM)
 
+parseTtl :: forall t. Integral t => Text -> t
+parseTtl ttl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
+
 initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
 initializeConsulClient hostname port man = do
   manager <- liftIO $ case man of
@@ -57,9 +58,7 @@ initializeConsulClient hostname port man = do
                         Nothing -> newManager defaultManagerSettings
   return $ ConsulClient manager hostname port
 
-
 {- Key Value -}
-
 getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
 getKey _client@ConsulClient{..} = I.getKey ccManager ccHostname ccPort
 
@@ -81,12 +80,43 @@ putKeyReleaseLock _client@ConsulClient{..} = I.putKeyReleaseLock ccManager ccHos
 deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m ()
 deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key
 
+{- Health Checks -}
+passHealthCheck :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m ()
+passHealthCheck _client@ConsulClient{..} = I.passHealthCheck ccManager ccHostname ccPort
+
+{- Catalog -}
+getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
+getService _client@ConsulClient{..} = I.getService ccManager ccHostname ccPort
+
 {- Agent -}
 getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
 getSelf _client@ConsulClient{..} = I.getSelf ccManager ccHostname ccPort
 
 registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
 registerService _client@ConsulClient{..} = I.registerService ccManager ccHostname ccPort
+
+runService :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
+runService client request action dc = do
+  r <- registerService client request dc
+  case r of
+    True -> do
+      mainFunc <- async action
+      checkAction <- case rsCheck request of
+                      Just(x@(Ttl _)) -> do
+                        a <- async $ ttlFunc x
+                        return $ Just a
+                      _ -> return Nothing
+      _ <- wait mainFunc
+      case checkAction of
+        Just a -> cancel a
+        Nothing -> return ()
+    False -> return ()
+  where
+    ttlFunc (Ttl x) = do
+      let ttl = parseTtl x
+      liftIO $ threadDelay $ (ttl - (fromIntegral $ floor (fromIntegral ttl / fromIntegral 2))) * 1000000
+      let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
+      passHealthCheck client checkId dc
 
 {- Session -}
 getSessionInfo :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
@@ -108,12 +138,12 @@ withSession client session action lostAction = do
       liftIO $ threadDelay (10 * 1000000)
       x <- getSessionInfo client (sId session) Nothing
       case x of
-        Just [] -> cancel var threadVar
-        Nothing -> cancel var threadVar
+        Just [] -> cancelAction var threadVar
+        Nothing -> cancelAction var threadVar
         Just _ -> runThread var threadVar
 
-    cancel :: TMVar a -> TMVar ThreadId -> m ()
-    cancel resultVar tidVar = do
+    cancelAction :: TMVar a -> TMVar ThreadId -> m ()
+    cancelAction resultVar tidVar = do
       tid <- liftIO $ atomically $ readTMVar tidVar
       killThread tid
       empty <- liftIO $ atomically $ isEmptyTMVar resultVar
