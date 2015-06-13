@@ -16,8 +16,8 @@ manager = newManager defaultManagerSettings
 
 {- Internal Tests -}
 internalKVTests :: TestTree
-internalKVTests = testGroup "Internal Key Value" [testGetInvalidKey, testPutKey, 
-  testGetKey,testGetKeys,testListKeys,testDeleteKey]
+internalKVTests = testGroup "Internal Key Value" [testGetInvalidKey, testPutKey,
+  testGetKey,testGetKeys,testListKeys,testDeleteKey,testGetNullValueKey]
 
 testGetInvalidKey :: TestTree
 testGetInvalidKey = testCase "testGetInvalidKey" $ do
@@ -40,8 +40,21 @@ testGetKey = testCase "testGetKey" $ do
   assertEqual "testGetKey: Write failed" True x1
   x2 <- I.getKey man "localhost" (PortNum 8500) "/testGetKey" Nothing Nothing Nothing
   case x2 of
-    Just x -> assertEqual "testGetKey: Incorrect Value" (kvValue x) "Test"
+    Just x -> assertEqual "testGetKey: Incorrect Value" (kvValue x) (Just "Test")
     Nothing -> assertFailure "testGetKey: No value returned"
+
+testGetNullValueKey :: TestTree
+testGetNullValueKey = testCase "testGetNullValueKey" $ do
+  man <- manager
+  man <- manager
+  let put = KeyValuePut "/testGetNullValueKey" "" Nothing Nothing
+  x1 <- I.putKey man "localhost" (PortNum 8500) put Nothing
+  assertEqual "testGetNullValueKey: Write failed" True x1
+  x2 <- I.getKey man "localhost" (PortNum 8500) "/testGetNullValueKey" Nothing Nothing Nothing
+  case x2 of
+    Just x -> assertEqual "testGetNullValueKey: Incorrect Value" (kvValue x) Nothing
+    Nothing -> assertFailure "testGetNullValueKey: No value returned"
+
 
 testGetKeys :: TestTree
 testGetKeys = testCase "testGetKeys" $ do

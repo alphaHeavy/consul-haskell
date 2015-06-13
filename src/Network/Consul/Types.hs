@@ -32,8 +32,10 @@ import Data.Traversable
 #endif
 import Control.Monad
 import Data.Aeson
+import Data.Aeson.Types
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B64
+import Data.Either.Combinators
 import Data.Foldable
 import Data.Int
 import Data.Text(Text)
@@ -63,7 +65,7 @@ data KeyValue = KeyValue {
   kvCreateIndex :: Word64,
   kvLockIndex :: Word64,
   kvModifyIndex :: Word64,
-  kvValue :: ByteString,
+  kvValue :: Maybe ByteString,
   kvFlags :: Word64,
   kvSession :: Maybe Text,
   kvKey :: Text
@@ -223,7 +225,15 @@ instance FromJSON HealthCheckStatus where
   parseJSON _ = mzero
 
 instance FromJSON KeyValue where
-  parseJSON (Object v) = KeyValue <$> v .: "CreateIndex" <*> v .: "LockIndex" <*> v .: "ModifyIndex" <*> (foo =<< B64.decode . TE.encodeUtf8 <$> v .: "Value") <*> v .: "Flags" <*> v .:? "Session" <*> v .: "Key"
+  parseJSON (Object v) =
+    KeyValue
+      <$> v .: "CreateIndex"
+      <*> v .: "LockIndex"
+      <*> v .: "ModifyIndex"
+      <*> (foo =<< (v .:? "Value"))
+      <*> v .: "Flags"
+      <*> v .:? "Session"
+      <*> v .: "Key"
   parseJSON _ = mzero
 
 instance FromJSON Datacenter where
@@ -292,6 +302,9 @@ instance FromJSON ServiceResult where
   parseJSON (Object x) = ServiceResult <$> x .: "Node" <*> x .: "Address" <*> x .: "ServiceID" <*> x .: "ServiceName" <*> x .: "ServiceTags" <*> x .:? "ServiceAddress" <*> x .:? "ServicePort"
   parseJSON _ = mzero
 
-foo :: Monad m => Either String a -> m a
-foo (Left x) = trace "failing" $ fail x
-foo (Right x) = return x
+foo :: Maybe Text -> Parser (Maybe ByteString)
+foo (Just x) =
+  case B64.decode $ TE.encodeUtf8 x of
+    Left y -> fail y
+    Right y -> return $ Just y
+foo Nothing = return Nothing
