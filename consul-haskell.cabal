@@ -38,7 +38,7 @@ library
     http-types,
     lifted-async,
     lifted-base,
-    monad-control,
+    monad-control < 1.0,
     network,
     text,
     transformers,
