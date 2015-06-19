@@ -113,7 +113,22 @@ testRegisterHealthCheck = testCase "testRegisterHealthCheck" $ do
   undefined -}
 
 {- Health Checks -}
---testServiceChecks :: 
+testGetServiceHealth :: TestTree
+testGetServiceHealth = testCase "testGetServiceHealth" $ do
+  man <- manager
+  let req = RegisterService (Just "testGetServiceHealth") "testGetServiceHealth" [] Nothing Nothing
+  r1 <- I.registerService man "localhost" (PortNum 8500) req Nothing
+  case r1 of
+    True -> do
+      r2 <- I.getServiceHealth man "localhost" (PortNum 8500) "testGetServiceHealth"
+      case r2 of
+        Just [x] -> return ()
+        Just [] -> assertFailure "testGetServiceHealth: No Services Returned"
+        Nothing -> assertFailure "testGetServiceHealth: Failed to parse result"
+    False -> assertFailure "testGetServiceHealth: Service was not created"
+
+testHealth :: TestTree
+testHealth = testGroup "Health Check Tests" [testGetServiceHealth]
 
 {- Session -}
 testCreateSession :: TestTree
@@ -209,7 +224,7 @@ agentTests :: TestTree
 agentTests = testGroup "Agent Tests" [testGetSelf,testRegisterService]
 
 allTests :: TestTree
-allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests, agentTests]
+allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests, agentTests,testHealth]
 
 main :: IO ()
 main = defaultMain allTests

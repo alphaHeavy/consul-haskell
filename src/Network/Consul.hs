@@ -11,6 +11,7 @@ module Network.Consul (
   , getKeys
   , getSelf
   , getService
+  , getServiceHealth
   , getSessionInfo
   , getSequencerForLock
   , initializeConsulClient
@@ -84,6 +85,9 @@ deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort
 passHealthCheck :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m ()
 passHealthCheck _client@ConsulClient{..} = I.passHealthCheck ccManager ccHostname ccPort
 
+getServiceHealth :: MonadIO m => ConsulClient -> Text -> m (Maybe [Health])
+getServiceHealth _client@ConsulClient{..} = I.getServiceHealth ccManager ccHostname ccPort
+
 {- Catalog -}
 getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
 getService _client@ConsulClient{..} = I.getService ccManager ccHostname ccPort
@@ -112,11 +116,12 @@ runService client request action dc = do
         Nothing -> return ()
     False -> return ()
   where
-    ttlFunc (Ttl x) = do
+    ttlFunc y@(Ttl x) = do
       let ttl = parseTtl x
       liftIO $ threadDelay $ (ttl - (fromIntegral $ floor (fromIntegral ttl / fromIntegral 2))) * 1000000
       let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
       passHealthCheck client checkId dc
+      ttlFunc y
 
 {- Session -}
 getSessionInfo :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])

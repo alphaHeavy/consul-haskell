@@ -39,6 +39,7 @@ import Control.Monad.IO.Class
 import Data.Aeson (decode,encode)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
 import Data.Maybe
 import Data.Text (Text)
@@ -195,9 +196,8 @@ deregisterHealthCheck manager hostname (PortNum portNumber) checkId = do
 
 passHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m ()
 passHealthCheck manager hostname portNumber checkId dc = do
-  initReq <- createRequest hostname portNumber (T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/pass/", checkId]) Nothing Nothing False dc
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/agent/check/pass/", checkId]) Nothing Nothing False dc
   liftIO $ withResponse initReq manager $ \ response -> do
-    _bodyParts <- brConsume $ responseBody response
     return ()
 
 warnHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
@@ -247,7 +247,7 @@ getServiceChecks manager hostname (PortNum portNumber) name = do
     let body = B.concat bodyParts
     return $ maybe [] id (decode $ BL.fromStrict body)
 
-getServiceHealth :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m (Maybe Health)
+getServiceHealth :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m (Maybe [Health])
 getServiceHealth manager hostname (PortNum portNumber) name = do
   initReq <- liftIO $ parseUrl $ T.unpack $ T.concat ["http://",hostname, ":", T.pack $ show portNumber ,"/v1/health/service/", name]
   liftIO $ withResponse initReq manager $ \ response -> do

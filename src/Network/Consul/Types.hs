@@ -10,6 +10,7 @@ module Network.Consul.Types (
   Datacenter (..),
   Health(..),
   HealthCheck(..),
+  HealthCheckStatus(..),
   KeyValue(..),
   KeyValuePut(..),
   Member(..),
@@ -123,8 +124,9 @@ data Service = Service {
   seId :: Text,
   seService :: Text,
   seTags :: [Text],
+  seAddress :: Maybe Text,
   sePort :: Maybe Int
-}
+} deriving (Show)
 
 data ServiceResult = ServiceResult{
   srrNode :: Text,
@@ -134,7 +136,7 @@ data ServiceResult = ServiceResult{
   srrServiceTags :: [Text],
   srrServiceAddress :: Maybe Text,
   srrServicePort :: Maybe Int
-}
+} deriving (Show)
 
 data Check = Check {
   cNode :: Text,
@@ -144,13 +146,13 @@ data Check = Check {
   cServiceId :: Maybe Text,
   cStatus :: HealthCheckStatus,
   cOutput :: Text,
-  cServiceName :: Text
-}
+  cServiceName :: Maybe Text
+} deriving (Show)
 
 data Node = Node {
   nNode :: Text,
   nAddress :: Text
-}
+} deriving (Show)
 
 {- Agent -}
 data RegisterHealthCheck = RegisterHealthCheck {
@@ -201,7 +203,7 @@ data Health = Health {
   hNode :: Node,
   hService :: Service,
   hChecks :: [Check]
-}
+} deriving (Show)
 
 
 {- JSON Instances -}
@@ -218,10 +220,10 @@ instance FromJSON Member where
   parseJSON _ = mzero
 
 instance FromJSON HealthCheckStatus where
-  parseJSON (String "Critical") = pure Critical
-  parseJSON (String "Passing") = pure Passing
-  parseJSON (String "Unknown") = pure Unknown
-  parseJSON (String "Warning") = pure Warning
+  parseJSON (String "critical") = pure Critical
+  parseJSON (String "passing") = pure Passing
+  parseJSON (String "unknown") = pure Unknown
+  parseJSON (String "warning") = pure Warning
   parseJSON _ = mzero
 
 instance FromJSON KeyValue where
@@ -241,11 +243,11 @@ instance FromJSON Datacenter where
   parseJSON _ = mzero
 
 instance FromJSON Check where
-  parseJSON (Object x) = Check <$> x .: "Node" <*> x .: "CheckId" <*> x .: "Name" <*> x .: "Notes" <*> x .: "ServiceId" <*> x .: "Status" <*> x .: "Output" <*> x .: "ServiceName"
+  parseJSON (Object x) = Check <$> x .: "Node" <*> x .: "CheckID" <*> x .: "Name" <*> x .:? "Notes" <*> x .:? "ServiceID" <*> x .: "Status" <*> x .: "Output" <*> x .:? "ServiceName"
   parseJSON _ = mzero
 
 instance FromJSON Service where
-  parseJSON (Object x) = Service <$> x .: "Id" <*> x .: "Service" <*> x .: "Tags" <*> x .: "Port"
+  parseJSON (Object x) = Service <$> x .: "ID" <*> x .: "Service" <*> x .: "Tags" <*> x .:? "Address" <*> x .:? "Port"
   parseJSON _ = mzero
 
 instance FromJSON Node where
@@ -281,7 +283,7 @@ instance ToJSON RegisterHealthCheck where
   toJSON (RegisterHealthCheck i name notes script interval ttl) = object ["id" .= i, "name" .= name, "notes" .= notes, "script" .= script, "interval" .= interval, "ttl" .= ttl]
 
 instance ToJSON RegisterService where
-  toJSON (RegisterService i name tags port check) = object ["ID" .= i, "Name" .= name, "Tags" .= tags, "Port" .= port, "Check" .= check]
+  toJSON (RegisterService i name tags port check) = object ["ID" .= i, "Name" .= name, "tags" .= tags, "port" .= port, "Check" .= check]
 
 instance ToJSON HealthCheck where
   toJSON (Ttl x) = object ["TTL" .= x]
