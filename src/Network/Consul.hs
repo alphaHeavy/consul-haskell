@@ -110,7 +110,7 @@ runService client request action dc = do
                         a <- async $ ttlFunc x
                         return $ Just a
                       _ -> return Nothing
-      _ <- wait mainFunc
+      _foo :: () <- wait mainFunc
       case checkAction of
         Just a -> cancel a
         Nothing -> return ()
