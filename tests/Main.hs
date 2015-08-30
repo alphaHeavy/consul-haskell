@@ -120,6 +120,7 @@ testGetServiceHealth = testCase "testGetServiceHealth" $ do
   r1 <- I.registerService man "localhost" (PortNum 8500) req Nothing
   case r1 of
     True -> do
+      liftIO $ threadDelay 1000000
       r2 <- I.getServiceHealth man "localhost" (PortNum 8500) "testGetServiceHealth"
       case r2 of
         Just [x] -> return ()
