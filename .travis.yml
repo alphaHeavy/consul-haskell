@@ -21,6 +21,10 @@ env:
 
 # Note: the distinction between `before_install` and `install` is not
 #       important.
+matrix:
+  allow_failures:
+  - env: CABALVER=head GHCVER=head
+
 before_install:
  - case "$HPVER" in
     "") ;;
