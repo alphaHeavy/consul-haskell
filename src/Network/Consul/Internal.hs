@@ -1,8 +1,12 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Consul.Internal (
+  --Client
+    hostWithScheme
+
   --Key-Value Store
-    deleteKey
+  , deleteKey
   , getKey
   , getKeys
   , listKeys
@@ -50,6 +54,10 @@ import Network.Consul.Types
 import Network.HTTP.Client
 import Network.HTTP.Types
 import Network.Socket (PortNumber(..))
+
+hostWithScheme :: ConsulClient -> Text
+hostWithScheme ConsulClient{..} = scheme `T.append` ccHostname
+  where scheme = if ccWithTls then "https://" else "http://"
 
 createRequest :: MonadIO m => Text -> PortNumber -> Text -> Maybe Text -> Maybe ByteString -> Bool -> Maybe Datacenter -> m Request
 createRequest hostWithScheme portNumber endpoint query body wait dc = do
