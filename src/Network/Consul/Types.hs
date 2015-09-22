@@ -49,7 +49,8 @@ import Network.Socket
 data ConsulClient = ConsulClient{
   ccManager :: Manager,
   ccHostname :: Text,
-  ccPort :: PortNumber
+  ccPort :: PortNumber,
+  ccWithTls :: Bool
 }
 
 data Datacenter = Datacenter Text deriving (Eq,Show,Ord)

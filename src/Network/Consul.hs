@@ -15,6 +15,7 @@ module Network.Consul (
   , getSessionInfo
   , getSequencerForLock
   , initializeConsulClient
+  , initializeTlsConsulClient
   , isValidSequencer
   , listKeys
   , ManagedSession (..)
@@ -44,6 +45,7 @@ import Data.Word
 import qualified Network.Consul.Internal as I
 import Network.Consul.Types
 import Network.HTTP.Client (defaultManagerSettings, newManager, Manager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.Socket (PortNumber)
 
 
@@ -57,47 +59,54 @@ initializeConsulClient hostname port man = do
   manager <- liftIO $ case man of
                         Just x -> return x
                         Nothing -> newManager defaultManagerSettings
-  return $ ConsulClient manager hostname port
+  return $ ConsulClient manager hostname port False
+
+initializeTlsConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
+initializeTlsConsulClient hostname port man = do
+    manager <- liftIO $ case man of
+                        Just x -> return x
+                        Nothing -> newManager tlsManagerSettings
+    return $ ConsulClient manager hostname port True
 
 {- Key Value -}
 getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
-getKey _client@ConsulClient{..} = I.getKey ccManager ccHostname ccPort
+getKey _client@ConsulClient{..} = I.getKey ccManager (I.hostWithScheme _client) ccPort
 
 getKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [KeyValue]
-getKeys _client@ConsulClient{..} = I.getKeys ccManager ccHostname ccPort
+getKeys _client@ConsulClient{..} = I.getKeys ccManager (I.hostWithScheme _client) ccPort
 
 listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [Text]
-listKeys _client@ConsulClient{..} = I.listKeys ccManager ccHostname ccPort
+listKeys _client@ConsulClient{..} = I.listKeys ccManager (I.hostWithScheme _client) ccPort
 
 putKey :: MonadIO m => ConsulClient -> KeyValuePut -> Maybe Datacenter -> m Bool
-putKey _client@ConsulClient{..} = I.putKey ccManager ccHostname ccPort
+putKey _client@ConsulClient{..} = I.putKey ccManager (I.hostWithScheme _client) ccPort
 
 putKeyAcquireLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
-putKeyAcquireLock _client@ConsulClient{..} = I.putKeyAcquireLock ccManager ccHostname ccPort
+putKeyAcquireLock _client@ConsulClient{..} = I.putKeyAcquireLock ccManager (I.hostWithScheme _client) ccPort
 
 putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
-putKeyReleaseLock _client@ConsulClient{..} = I.putKeyReleaseLock ccManager ccHostname ccPort
+putKeyReleaseLock _client@ConsulClient{..} = I.putKeyReleaseLock ccManager (I.hostWithScheme _client) ccPort
 
 deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m ()
-deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager ccHostname ccPort key
+deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager (I.hostWithScheme _client) ccPort key
 
 {- Health Checks -}
 passHealthCheck :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m ()
-passHealthCheck _client@ConsulClient{..} = I.passHealthCheck ccManager ccHostname ccPort
+passHealthCheck _client@ConsulClient{..} = I.passHealthCheck ccManager (I.hostWithScheme _client) ccPort
 
 getServiceHealth :: MonadIO m => ConsulClient -> Text -> m (Maybe [Health])
-getServiceHealth _client@ConsulClient{..} = I.getServiceHealth ccManager ccHostname ccPort
+getServiceHealth _client@ConsulClient{..} = I.getServiceHealth ccManager (I.hostWithScheme _client) ccPort
 
 {- Catalog -}
 getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
-getService _client@ConsulClient{..} = I.getService ccManager ccHostname ccPort
+getService _client@ConsulClient{..} = I.getService ccManager (I.hostWithScheme _client) ccPort
 
 {- Agent -}
 getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
-getSelf _client@ConsulClient{..} = I.getSelf ccManager ccHostname ccPort
+getSelf _client@ConsulClient{..} = I.getSelf ccManager (I.hostWithScheme _client) ccPort
 
 registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
-registerService _client@ConsulClient{..} = I.registerService ccManager ccHostname ccPort
+registerService _client@ConsulClient{..} = I.registerService ccManager (I.hostWithScheme _client) ccPort
 
 runService :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
 runService client request action dc = do
@@ -125,7 +134,7 @@ runService client request action dc = do
 
 {- Session -}
 getSessionInfo :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
-getSessionInfo _client@ConsulClient{..} = I.getSessionInfo ccManager ccHostname ccPort
+getSessionInfo _client@ConsulClient{..} = I.getSessionInfo ccManager (I.hostWithScheme _client) ccPort
 
 withSession :: forall a m. (MonadIO m,MonadBaseControl IO m) => ConsulClient -> Session -> (Session -> m a) -> m a -> m a
 withSession client session action lostAction = do
@@ -204,7 +213,7 @@ withManagedSession client ttl action lostAction = do
 createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Text -> m (Maybe ManagedSession)
 createManagedSession _client@ConsulClient{..} name ttl = do
   let r = SessionRequest Nothing name Nothing [] (Just Release) (Just ttl)
-  s <- I.createSession ccManager ccHostname ccPort r Nothing
+  s <- I.createSession ccManager (I.hostWithScheme _client) ccPort r Nothing
   mapM f s
   where
     f x = do
@@ -216,7 +225,7 @@ createManagedSession _client@ConsulClient{..} name ttl = do
     runThread :: Session -> IO ()
     runThread s = do
       threadDelay $ (saneTtl - (saneTtl - 10)) * 1000000
-      x <- I.renewSession ccManager ccHostname ccPort s Nothing
+      x <- I.renewSession ccManager (I.hostWithScheme _client) ccPort s Nothing
       case x of
         True -> runThread s
         False -> return ()
@@ -224,4 +233,4 @@ createManagedSession _client@ConsulClient{..} name ttl = do
 destroyManagedSession :: MonadIO m => ConsulClient -> ManagedSession -> m ()
 destroyManagedSession _client@ConsulClient{..} (ManagedSession session tid) = do
   liftIO $ killThread tid
-  I.destroySession ccManager ccHostname ccPort session Nothing
+  I.destroySession ccManager (I.hostWithScheme _client) ccPort session Nothing
