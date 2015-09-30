@@ -34,6 +34,7 @@ import Control.Concurrent hiding (killThread)
 import Control.Concurrent.Async.Lifted
 import Control.Concurrent.Lifted (fork, killThread)
 import Control.Concurrent.STM
+import Control.Exception.Lifted
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Control
 import Data.Text (Text)
@@ -117,10 +118,13 @@ runService client request action dc = do
     False -> return ()
   where
     ttlFunc y@(Ttl x) = do
-      let ttl = parseTtl x
-      liftIO $ threadDelay $ (ttl - (fromIntegral $ floor (fromIntegral ttl / fromIntegral 2))) * 1000000
-      let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
-      passHealthCheck client checkId dc
+      (do
+        let ttl = parseTtl x
+        liftIO $ threadDelay $ (ttl - (fromIntegral $ floor (fromIntegral ttl / fromIntegral 2))) * 1000000
+        let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
+        passHealthCheck client checkId dc) `catch` (\ e -> do
+           let _x :: SomeException = e
+           return ())
       ttlFunc y
 
 {- Session -}
