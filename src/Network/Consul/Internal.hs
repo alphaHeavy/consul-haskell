@@ -61,11 +61,9 @@ hostWithScheme ConsulClient{..} = scheme `T.append` ccHostname
 
 createRequest :: MonadIO m => Text -> PortNumber -> Text -> Maybe Text -> Maybe ByteString -> Bool -> Maybe Datacenter -> m Request
 createRequest hostWithScheme portNumber endpoint query body wait dc = do
-  liftIO $ putStrLn $ "PORT: " ++ (show portNumber)
   let baseUrl = T.concat [hostWithScheme,":",T.pack $ show portNumber,endpoint,needQueryString
                          ,maybe "" id query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
   initReq <- liftIO $ parseUrl $ T.unpack baseUrl
-  liftIO $ putStrLn $ "REQ: " ++ (show initReq)
   case body of
     Just x -> return $ indef $ initReq{ method = "PUT", requestBody = RequestBodyBS x, checkStatus = \ _ _ _ -> Nothing}
     Nothing -> return $ indef $ initReq{checkStatus = \ _ _ _ -> Nothing}
