@@ -2,6 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Network.Consul (
     createManagedSession
@@ -48,6 +49,7 @@ import Network.Consul.Types
 import Network.HTTP.Client (defaultManagerSettings, newManager, Manager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.Socket (PortNumber)
+import qualified Network.Consul.TemplateHaskell as TH
 
 
 import Prelude hiding (mapM)
@@ -69,45 +71,22 @@ initializeTlsConsulClient hostname port man = do
                         Nothing -> newManager tlsManagerSettings
     return $ ConsulClient manager hostname port True
 
-{- Key Value -}
-getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
-getKey _client@ConsulClient{..} = I.getKey ccManager (I.hostWithScheme _client) ccPort
+toShim :: [Name]
+toShim = map mkName [ "I.getKey"
+                    , "I.getKeys"
+                    , "I.listKeys"
+                    , "I.putKey"
+                    , "I.putKeyAcquireLock"
+                    , "I.putKeyReleaseLock"
+                    , "I.deleteKey"
+                    , "I.passHealthCheck"
+                    , "I.getServiceHealth"
+                    , "I.getService"
+                    , "I.getSelf"
+                    , "I.registerService"
+                    ]
 
-getKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [KeyValue]
-getKeys _client@ConsulClient{..} = I.getKeys ccManager (I.hostWithScheme _client) ccPort
-
-listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [Text]
-listKeys _client@ConsulClient{..} = I.listKeys ccManager (I.hostWithScheme _client) ccPort
-
-putKey :: MonadIO m => ConsulClient -> KeyValuePut -> Maybe Datacenter -> m Bool
-putKey _client@ConsulClient{..} = I.putKey ccManager (I.hostWithScheme _client) ccPort
-
-putKeyAcquireLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
-putKeyAcquireLock _client@ConsulClient{..} = I.putKeyAcquireLock ccManager (I.hostWithScheme _client) ccPort
-
-putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
-putKeyReleaseLock _client@ConsulClient{..} = I.putKeyReleaseLock ccManager (I.hostWithScheme _client) ccPort
-
-deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m ()
-deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager (I.hostWithScheme _client) ccPort key
-
-{- Health Checks -}
-passHealthCheck :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m ()
-passHealthCheck _client@ConsulClient{..} = I.passHealthCheck ccManager (I.hostWithScheme _client) ccPort
-
-getServiceHealth :: MonadIO m => ConsulClient -> Text -> m (Maybe [Health])
-getServiceHealth _client@ConsulClient{..} = I.getServiceHealth ccManager (I.hostWithScheme _client) ccPort
-
-{- Catalog -}
-getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
-getService _client@ConsulClient{..} = I.getService ccManager (I.hostWithScheme _client) ccPort
-
-{- Agent -}
-getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
-getSelf _client@ConsulClient{..} = I.getSelf ccManager (I.hostWithScheme _client) ccPort
-
-registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
-registerService _client@ConsulClient{..} = I.registerService ccManager (I.hostWithScheme _client) ccPort
+performShim toShim
 
 runService :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
 runService client request action dc = do
