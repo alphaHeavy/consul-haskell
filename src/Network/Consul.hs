@@ -86,7 +86,7 @@ toShim = map mkName [ "I.getKey"
                     , "I.registerService"
                     ]
 
-performShim toShim
+mkShim toShim
 
 runService :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
 runService client request action dc = do
