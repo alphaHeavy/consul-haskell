@@ -71,22 +71,7 @@ initializeTlsConsulClient hostname port man = do
                         Nothing -> newManager tlsManagerSettings
     return $ ConsulClient manager hostname port True
 
-toShim :: [Name]
-toShim = map mkName [ "I.getKey"
-                    , "I.getKeys"
-                    , "I.listKeys"
-                    , "I.putKey"
-                    , "I.putKeyAcquireLock"
-                    , "I.putKeyReleaseLock"
-                    , "I.deleteKey"
-                    , "I.passHealthCheck"
-                    , "I.getServiceHealth"
-                    , "I.getService"
-                    , "I.getSelf"
-                    , "I.registerService"
-                    ]
-
-mkShim toShim
+TH.mkShim TH.toShim
 
 runService :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
 runService client request action dc = do

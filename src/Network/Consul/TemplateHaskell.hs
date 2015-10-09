@@ -2,11 +2,28 @@
 
 module Network.Consul.TemplateHaskell (
     mkShim
+  , toShim
   ) where
 
+import Control.Monad (forM)
 import Language.Haskell.TH
 import Network.Consul.Types
 import qualified Network.Consul.Internal as I
+
+toShim :: [Name]
+toShim = map mkName [ "I.getKey"
+                    , "I.getKeys"
+                    , "I.listKeys"
+                    , "I.putKey"
+                    , "I.putKeyAcquireLock"
+                    , "I.putKeyReleaseLock"
+                    , "I.deleteKey"
+                    , "I.passHealthCheck"
+                    , "I.getServiceHealth"
+                    , "I.getService"
+                    , "I.getSelf"
+                    , "I.registerService"
+                    ]
 
 applyArgs :: ExpQ -> [ExpQ] -> ExpQ
 applyArgs = foldl appE
@@ -20,5 +37,4 @@ mkShim fnNames = forM fnNames $ \fnName -> do
               getter <- ['ccManager, 'I.hostWithScheme, 'ccPort]]
   let body = normalB $ applyArgs (varE fnName) args
   let cls = clause [varP $ mkName "_consul"] body []
-  dec <- funD shimmedName [cls]
-  return dec
+  funD shimmedName [cls]
