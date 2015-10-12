@@ -11,7 +11,7 @@ module Network.Consul.Types (
   Health(..),
   HealthCheck(..),
   HealthCheckStatus(..),
-  KeyValue(..),
+  Network.Consul.Types.KeyValue(..),
   KeyValuePut(..),
   Member(..),
   Node(..),
