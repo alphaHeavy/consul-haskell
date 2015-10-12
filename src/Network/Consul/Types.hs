@@ -229,7 +229,7 @@ instance FromJSON HealthCheckStatus where
 
 instance FromJSON KeyValue where
   parseJSON (Object v) =
-    KeyValue
+    Network.Consul.Types.KeyValue
       <$> v .: "CreateIndex"
       <*> v .: "LockIndex"
       <*> v .: "ModifyIndex"
