@@ -33,7 +33,7 @@ import Data.Traversable
 #endif
 import Control.Monad
 import Data.Aeson
-import Data.Aeson.Types hiding (KeyValue)
+import Data.Aeson.Types hiding (KeyValue(..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B64
 import Data.Either.Combinators
