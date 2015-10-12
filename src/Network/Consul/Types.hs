@@ -227,7 +227,7 @@ instance FromJSON HealthCheckStatus where
   parseJSON (String "warning") = pure Warning
   parseJSON _ = mzero
 
-instance FromJSON KeyValue where
+instance FromJSON Network.Consul.Types.KeyValue where
   parseJSON (Object v) =
     Network.Consul.Types.KeyValue
       <$> v .: "CreateIndex"
