@@ -50,6 +50,7 @@ testGetNullValueKey = testCase "testGetNullValueKey" $ do
   let put = KeyValuePut "/testGetNullValueKey" "" Nothing Nothing
   x1 <- I.putKey ccManager (I.hostWithScheme _client) ccPort put Nothing
   assertEqual "testGetNullValueKey: Write failed" True x1
+  liftIO $ threadDelay (500 * 1000)
   x2 <- I.getKey ccManager (I.hostWithScheme _client) ccPort "/testGetNullValueKey" Nothing Nothing Nothing
   case x2 of
     Just x -> assertEqual "testGetNullValueKey: Incorrect Value" (kvValue x) Nothing
