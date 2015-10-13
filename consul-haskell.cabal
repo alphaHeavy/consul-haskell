@@ -44,6 +44,7 @@ library
     monad-control >= 1.0,
     network,
     text,
+    template-haskell >= 2.10,
     transformers,
     stm
   ghc-options:
