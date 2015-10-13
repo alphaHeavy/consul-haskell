@@ -304,6 +304,7 @@ instance FromJSON ServiceResult where
   parseJSON _ = mzero
 
 foo :: Maybe Text -> Parser (Maybe ByteString)
+foo (Just Null) = return Nothing
 foo (Just x) =
   case B64.decode $ TE.encodeUtf8 x of
     Left y -> fail y
