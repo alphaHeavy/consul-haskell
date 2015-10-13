@@ -81,6 +81,7 @@ getKey manager hostname portnumber key index consistency dc = do
       x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         let body = B.concat bodyParts
+        liftIO $ print body
         return $ listToMaybe =<< (decode $ BL.fromStrict body)
       _ -> return Nothing
   where
