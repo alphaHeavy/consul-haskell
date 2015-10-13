@@ -43,7 +43,7 @@ import Control.Monad.IO.Class
 import Data.Aeson (decode,encode)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Base64 as B64
+--import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
 import Data.Maybe
 import Data.Text (Text)
@@ -73,7 +73,7 @@ createRequest hostWithScheme portNumber endpoint query body wait dc = do
     indef req = if wait == True then req{responseTimeout = Nothing} else req
 
 {- Key Value Store -}
-getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
+getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe Network.Consul.Types.KeyValue)
 getKey manager hostname portnumber key index consistency dc = do
   request <- createRequest hostname portnumber (T.concat ["/v1/kv/",key]) fquery Nothing (isJust index) dc
   liftIO $ withResponse request manager $ \ response -> do

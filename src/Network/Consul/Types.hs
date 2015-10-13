@@ -33,16 +33,14 @@ import Data.Traversable
 #endif
 import Control.Monad
 import Data.Aeson
-import Data.Aeson.Types hiding (KeyValue(..))
+import Data.Aeson.Types
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B64
-import Data.Either.Combinators
 import Data.Foldable
 import Data.Int
 import Data.Text(Text)
 import qualified Data.Text.Encoding as TE
 import Data.Word
-import Debug.Trace
 import Network.HTTP.Client (Manager)
 import Network.Socket
 
@@ -299,7 +297,7 @@ instance ToJSON (Either (Text,Text) Text) where
   toJSON (Right ttl) = object ["TTL" .= ttl]
 
 instance ToJSON ServiceResult where
-  toJSON (ServiceResult node addr sId sName sTags sAddress sPort) = object["Node" .= node, "Address" .= addr, "ServiceID" .= sId, "ServiceName" .= sName, "ServiceTags" .= sTags, "ServiceAddress" .= sAddress, "ServicePort" .= sPort]
+  toJSON (ServiceResult node addr sid sName sTags sAddress sPort) = object["Node" .= node, "Address" .= addr, "ServiceID" .= sid, "ServiceName" .= sName, "ServiceTags" .= sTags, "ServiceAddress" .= sAddress, "ServicePort" .= sPort]
 
 instance FromJSON ServiceResult where
   parseJSON (Object x) = ServiceResult <$> x .: "Node" <*> x .: "Address" <*> x .: "ServiceID" <*> x .: "ServiceName" <*> x .: "ServiceTags" <*> x .:? "ServiceAddress" <*> x .:? "ServicePort"
