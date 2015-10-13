@@ -303,10 +303,10 @@ instance FromJSON ServiceResult where
   parseJSON (Object x) = ServiceResult <$> x .: "Node" <*> x .: "Address" <*> x .: "ServiceID" <*> x .: "ServiceName" <*> x .: "ServiceTags" <*> x .:? "ServiceAddress" <*> x .:? "ServicePort"
   parseJSON _ = mzero
 
-foo :: Maybe Text -> Parser (Maybe ByteString)
-foo (Just Null) = return Nothing
-foo (Just x) =
+foo :: Maybe Value -> Parser (Maybe ByteString)
+foo (Just (String x)) =
   case B64.decode $ TE.encodeUtf8 x of
     Left y -> fail y
     Right y -> return $ Just y
+foo (Just _) = return Nothing
 foo Nothing = return Nothing
