@@ -37,15 +37,18 @@ module Network.Consul.Internal (
   --Catalog
   , getDatacenters
   , getService
+  , getServices
   ) where
 
 import Control.Monad.IO.Class
-import Data.Aeson (decode,encode)
+import Data.Aeson (Value(..), decode,encode)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 --import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.HashMap.Strict as H
 import Data.Maybe
+import qualified Data.Vector as V
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -317,3 +320,18 @@ getService manager hostname portNumber name tag dc = do
   liftIO $ withResponse req manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     return $ decode $ BL.fromStrict $ B.concat bodyParts
+
+getServices :: MonadIO m => Manager -> Text -> PortNumber -> Maybe Text -> Maybe Datacenter -> m [Text]
+getServices manager hostname portNumber tag dc = do
+    req <- createRequest hostname portNumber "/v1/catalog/services" (fmap (T.append "tag=") tag) Nothing False dc
+    liftIO $ withResponse req manager $ \ response -> do
+        bodyParts <- brConsume $ responseBody response
+        return $ parseServices tag $ decode $ BL.fromStrict $ B.concat bodyParts
+  where
+    parseServices t (Just (Object v)) = filterTags t $ H.toList v
+    parseServices _   _               = []
+    filterTags :: Maybe Text -> [(Text, Value)] -> [Text]
+    filterTags (Just t)               = map fst . filter (\ (_, (Array v)) -> (String t) `V.elem` v)
+    filterTags Nothing                = map fst
+
+
