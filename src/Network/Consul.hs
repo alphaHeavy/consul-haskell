@@ -11,6 +11,7 @@ module Network.Consul (
   , getKeys
   , getSelf
   , getService
+  , getServices
   , getServiceHealth
   , getSessionInfo
   , getSequencerForLock
@@ -102,6 +103,9 @@ getServiceHealth _client@ConsulClient{..} = I.getServiceHealth ccManager (I.host
 {- Catalog -}
 getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
 getService _client@ConsulClient{..} = I.getService ccManager (I.hostWithScheme _client) ccPort
+
+getServices :: MonadIO m => ConsulClient -> Maybe Text -> Maybe Datacenter -> m [Text]
+getServices _client@ConsulClient{..} = I.getServices ccManager (I.hostWithScheme _client) ccPort
 
 {- Agent -}
 getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
