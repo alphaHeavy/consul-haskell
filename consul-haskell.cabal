@@ -36,6 +36,7 @@ library
     bytestring,
     connection,
     either,
+    exceptions,
     http-client,
     http-client-tls,
     http-types,
@@ -43,9 +44,10 @@ library
     lifted-base,
     monad-control >= 1.0,
     network,
+    retry,
+    stm,
     text,
-    transformers,
-    stm
+    transformers
   ghc-options:
     -Wall
 

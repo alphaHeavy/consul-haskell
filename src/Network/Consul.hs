@@ -37,7 +37,9 @@ import Control.Concurrent.Lifted (fork, killThread)
 import Control.Concurrent.STM
 import Control.Exception.Lifted
 import Control.Monad.IO.Class
+import Control.Monad.Catch (MonadMask)
 import Control.Monad.Trans.Control
+import Control.Retry
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR
@@ -187,13 +189,13 @@ isValidSequencer client sequencer datacenter = do
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
 
-withSequencer :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
+withSequencer :: (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
 withSequencer client sequencer action lostAction delay dc = do
   mainFunc <- async action
   pulseFunc <- async pulseLock
   waitAny [mainFunc, pulseFunc] >>= return . snd
   where
-    pulseLock = do
+    pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ do
       liftIO $ threadDelay delay
       valid <- isValidSequencer client sequencer dc
       case valid of
