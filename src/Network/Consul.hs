@@ -42,6 +42,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Catch (MonadMask)
 import Control.Monad.Trans.Control
 import Control.Retry
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR
