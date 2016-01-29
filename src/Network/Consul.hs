@@ -28,7 +28,7 @@ module Network.Consul (
   , registerService
   , runService
   , withManagedSession
-  , withSequencer
+--  , withSequencer
   , withSession
   , module Network.Consul.Types
 ) where
@@ -197,19 +197,20 @@ isValidSequencer client sequencer datacenter = do
   case mkv of
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
-
+{- 
 withSequencer :: (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
 withSequencer client sequencer action lostAction delay dc = do
   mainFunc <- async action
   pulseFunc <- async pulseLock
   waitAny [mainFunc, pulseFunc] >>= return . snd
   where
-    pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ do
+    pulseLock = recoverAll (exponentialBackoff 50000 <> limitRetries 5) $ do
       liftIO $ threadDelay delay
       valid <- isValidSequencer client sequencer dc
       case valid of
         True -> pulseLock
         False -> lostAction
+-}
 
 {- Helper Functions -}
 {- ManagedSession is a session with an associated TTL healthcheck so the session will be terminated if the client dies. The healthcheck will be automatically updated. -}
