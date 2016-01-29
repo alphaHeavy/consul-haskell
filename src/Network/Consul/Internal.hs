@@ -328,7 +328,7 @@ getService manager hostname portNumber name tag dc = do
 getServices :: MonadIO m => Manager -> Text -> PortNumber -> Maybe Text -> Maybe Datacenter -> m [Text]
 getServices manager hostname portNumber tag dc = do
     req <- createRequest hostname portNumber "/v1/catalog/services" Nothing Nothing False dc
-    putStrLn "HERE"
+    liftIO $ putStrLn "HERE"
     liftIO $ withResponse req manager $ \ response -> do
         bodyParts <- brConsume $ responseBody response
         return $ parseServices tag $ decode $ BL.fromStrict $ B.concat bodyParts
