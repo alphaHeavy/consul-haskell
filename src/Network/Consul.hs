@@ -183,15 +183,62 @@ isValidSequencer client sequencer datacenter = do
   case mkv of
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
-
+{- 
 withSequencer :: (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
 withSequencer client sequencer action lostAction delay dc =
   withAsync action $ \ mainAsync -> withAsync pulseLock $ \ pulseAsync -> do
     waitAnyCancel [mainAsync, pulseAsync] >>= return . snd
   where
+<<<<<<< 901763baff185f3be18054646531bf88161310c5
     pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
+=======
+    pulseLock = recoverAll (exponentialBackoff 50000 <> limitRetries 5) $ do
+>>>>>>> Remove withSequencer for now
       liftIO $ threadDelay delay
       valid <- isValidSequencer client sequencer dc
       case valid of
         True -> pulseLock
         False -> lostAction
+<<<<<<< 901763baff185f3be18054646531bf88161310c5
+=======
+-}
+
+{- Helper Functions -}
+{- ManagedSession is a session with an associated TTL healthcheck so the session will be terminated if the client dies. The healthcheck will be automatically updated. -}
+data ManagedSession = ManagedSession{
+  msSession :: Session,
+  msThreadId :: ThreadId
+}
+
+withManagedSession :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> Text -> (Session -> m ()) -> m () -> m ()
+withManagedSession client ttl action lostAction = do
+  x <- createManagedSession client Nothing ttl
+  case x of
+    Just s -> withSession client (msSession s) action lostAction >> destroyManagedSession client s
+    Nothing -> lostAction
+
+createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Text -> m (Maybe ManagedSession)
+createManagedSession _client@ConsulClient{..} name ttl = do
+  let r = SessionRequest Nothing name Nothing [] (Just Release) (Just ttl)
+  s <- I.createSession ccManager (I.hostWithScheme _client) ccPort r Nothing
+  mapM f s
+  where
+    f x = do
+      tid <- liftIO $ forkIO $ runThread x
+      return $ ManagedSession x tid
+
+    saneTtl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
+
+    runThread :: Session -> IO ()
+    runThread s = do
+      threadDelay $ (saneTtl - (saneTtl - 10)) * 1000000
+      x <- I.renewSession ccManager (I.hostWithScheme _client) ccPort s Nothing
+      case x of
+        True -> runThread s
+        False -> return ()
+
+destroyManagedSession :: MonadIO m => ConsulClient -> ManagedSession -> m ()
+destroyManagedSession _client@ConsulClient{..} (ManagedSession session tid) = do
+  liftIO $ killThread tid
+  I.destroySession ccManager (I.hostWithScheme _client) ccPort session Nothing
+>>>>>>> Remove withSequencer for now
