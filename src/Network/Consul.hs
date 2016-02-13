@@ -40,6 +40,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Catch (MonadMask)
 import Control.Monad.Trans.Control
 import Control.Retry
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR
@@ -231,7 +232,7 @@ createManagedSession _client@ConsulClient{..} name ttl = do
     runThread :: Session -> IO ()
     runThread s = do
       threadDelay $ (saneTtl - (saneTtl - 10)) * 1000000
-      x <- I.renewSession ccManager (I.hostWithScheme _client) ccPort s Nothing
+      x <- (I.renewSession ccManager (I.hostWithScheme _client) ccPort s Nothing) `catch` (\ e -> print (e :: SomeException) >> return True)
       case x of
         True -> runThread s
         False -> return ()
