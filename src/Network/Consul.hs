@@ -196,7 +196,7 @@ withSequencer client sequencer action lostAction delay dc = do
   pulseFunc <- async pulseLock
   waitAny [mainFunc, pulseFunc] >>= return . snd
   where
-    pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ do
+    pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
       liftIO $ threadDelay delay
       valid <- isValidSequencer client sequencer dc
       case valid of
