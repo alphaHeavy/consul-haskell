@@ -24,7 +24,7 @@ install:
 - hash -r
 before_script:
 - wget 'https://releases.hashicorp.com/consul/0.6.3/consul_0.6.3_linux_amd64.zip'
-- unzip "0.6.3_linux_amd64.zip"
+- unzip "consul_0.6.3_linux_amd64.zip"
 script:
 - ./consul agent -server -bootstrap-expect 1 -data-dir /tmp/consul &
 - stack --no-terminal --skip-ghc-check build --test
