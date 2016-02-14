@@ -177,7 +177,7 @@ testDestroySession = testCase "testDestroySession" $ do
     Just x -> do
       _ <- I.destroySession ccManager (I.hostWithScheme _client) ccPort x Nothing
       x1 <- I.getSessionInfo ccManager (I.hostWithScheme _client) ccPort (sId x) Nothing
-      assertEqual "testDestroySession: Session info was returned after destruction" Nothing x1
+      assertBool "testDestroySession: Session info was returned after destruction" $ (x1 == Nothing) || (x1 == Just [])
     Nothing -> assertFailure "testDestroySession: No session was created"
 
 testInternalSession :: TestTree
