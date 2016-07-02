@@ -1,14 +1,18 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 import Control.Concurrent
 import Control.Monad.IO.Class
 import Data.Maybe
 import Data.Text (Text)
-import Network.Consul (createManagedSession,getSessionInfo,initializeConsulClient,withSession,ConsulClient(..),ManagedSession(..))
+import Data.UUID
+import Network.Consul (getSessionInfo,initializeConsulClient,withSession,ConsulClient(..))
 import Network.Consul.Types
 import qualified Network.Consul.Internal as I
 import Network.HTTP.Client
 import Network.Socket (PortNumber(..))
+import System.Random
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -168,6 +172,16 @@ testRenewSession = testCase "testRenewSession" $ do
         False -> assertFailure "testRenewSession: Session was not renewed"
     Nothing -> assertFailure "testRenewSession: No session was created"
 
+testRenewNonexistentSession :: TestTree
+testRenewNonexistentSession = testCase "testRenewNonexistentSession" $ do
+  _client@ConsulClient{..} <- client
+  sessId :: UUID <- randomIO
+  let session = Session (toText sessId) Nothing
+  x <- I.renewSession ccManager (I.hostWithScheme _client) ccPort session Nothing
+  case x of
+    True -> assertFailure "testRenewNonexistentSession: Non-existent session was renewed"
+    False -> return ()
+
 testDestroySession :: TestTree
 testDestroySession = testCase "testDestroySession" $ do
   _client@ConsulClient{..} <- client
@@ -181,24 +195,21 @@ testDestroySession = testCase "testDestroySession" $ do
     Nothing -> assertFailure "testDestroySession: No session was created"
 
 testInternalSession :: TestTree
-testInternalSession = testGroup "Internal Session Tests" [testCreateSession, testGetSessionInfo, testRenewSession, testDestroySession]
+testInternalSession = testGroup "Internal Session Tests" [testCreateSession, testGetSessionInfo, testRenewSession, testRenewNonexistentSession, testDestroySession]
 
-{- Managed Session -}
-testCreateManagedSession :: TestTree
-testCreateManagedSession = testCase "testCreateManagedSession" $ do
-  client <- initializeConsulClient "localhost" 8500 Nothing
-  x <- createManagedSession client (Just "testCreateManagedSession") "60s"
-  assertEqual "testCreateManagedSession: Session not created" True (isJust x)
 
 testSessionMaintained :: TestTree
 testSessionMaintained = testCase "testSessionMaintained" $ do
-  client <- initializeConsulClient "localhost" 8500 Nothing
-  x <- createManagedSession client (Just "testCreateManagedSession") "10s"
-  assertEqual "testSessionMaintained: Session not created" True (isJust x)
-  let (Just foo) = x
-  threadDelay (12 * 1000000)
-  y <- getSessionInfo client (sId $ msSession foo) Nothing
-  assertEqual "testSessionMaintained: Session not found" True (isJust y)
+  client@ConsulClient{..} <- client
+  let req = SessionRequest Nothing (Just "testSessionMaintained") Nothing ["serfHealth"] (Just Release) (Just "10s")
+  result <- I.createSession ccManager (I.hostWithScheme client) ccPort req Nothing
+  case result of
+    Just session -> do
+      threadDelay (12 * 1000000)
+      y <- getSessionInfo client (sId session) Nothing
+      assertEqual "testSessionMaintained: Session not found" True (isJust y)
+    Nothing -> assertFailure "testSessionMaintained: No Session was created"
+
 
 testWithSessionCancel :: TestTree
 testWithSessionCancel = testCase "testWithSessionCancel" $ do
@@ -206,26 +217,33 @@ testWithSessionCancel = testCase "testWithSessionCancel" $ do
   let req = SessionRequest Nothing (Just "testWithSessionCancel") Nothing ["serfHealth"] (Just Release) (Just "10s")
   result <- I.createSession ccManager (I.hostWithScheme client) ccPort req Nothing
   case result of
-    Just x -> do
-      x1 <- withSession client x (\ y -> action y client ) cancelAction
+    Just session -> do
+      x1 <- withSession client Nothing 5 session (\ y -> action y client ) cancelAction
       assertEqual "testWithSessionCancel: Incorrect value" "Canceled" x1
+      y <- getSessionInfo client (sId session) Nothing
+      assertEqual "testWithSessionCancel: Session was found" False (isJust y)
+
     Nothing -> assertFailure "testWithSessionCancel: No session was created"
+
   where
+    action :: MonadIO m => Session -> ConsulClient -> m Text
     action x client@ConsulClient{..} = do
       I.destroySession ccManager (I.hostWithScheme client) ccPort x Nothing
-      threadDelay (30 * 1000000)
+      liftIO $ threadDelay (30 * 1000000)
       return ("NotCanceled" :: Text)
+
+    cancelAction :: MonadIO m => m Text
     cancelAction = return ("Canceled" :: Text)
 
 
-managedSessionTests :: TestTree
-managedSessionTests = testGroup "Managed Session Tests" [ testCreateManagedSession, testSessionMaintained, testWithSessionCancel]
+sessionWorkflowTests :: TestTree
+sessionWorkflowTests = testGroup "Session Workflow Tests" [testWithSessionCancel,testSessionMaintained]
 
 agentTests :: TestTree
 agentTests = testGroup "Agent Tests" [testGetSelf,testRegisterService]
 
 allTests :: TestTree
-allTests = testGroup "All Tests" [testInternalSession, internalKVTests, managedSessionTests, agentTests,testHealth]
+allTests = testGroup "All Tests" [testInternalSession, internalKVTests, sessionWorkflowTests, agentTests,testHealth]
 
 main :: IO ()
 main = defaultMain allTests

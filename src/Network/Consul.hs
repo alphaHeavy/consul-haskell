@@ -4,9 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Network.Consul (
-    createManagedSession
-  , deleteKey
-  , destroyManagedSession
+    deleteKey
   , getKey
   , getKeys
   , getSelf
@@ -18,14 +16,12 @@ module Network.Consul (
   , initializeTlsConsulClient
   , isValidSequencer
   , listKeys
-  , ManagedSession (..)
   , passHealthCheck
   , putKey
   , putKeyAcquireLock
   , putKeyReleaseLock
   , registerService
   , runService
-  , withManagedSession
   , withSequencer
   , withSession
   , module Network.Consul.Types
@@ -33,7 +29,6 @@ module Network.Consul (
 
 import Control.Concurrent hiding (killThread)
 import Control.Concurrent.Async.Lifted
-import Control.Concurrent.Lifted (fork, killThread)
 import Control.Concurrent.STM
 import Control.Exception.Lifted
 import Control.Monad.IO.Class
@@ -123,56 +118,37 @@ runService client request action dc = do
                         a <- async $ ttlFunc x
                         return $ Just a
                       _ -> return Nothing
-      _foo :: () <- wait mainFunc
+      _foo :: () <- wait mainFunc --prevent: 'StM’ is a type function, and may not be injective
       case checkAction of
         Just a -> cancel a
         Nothing -> return ()
     False -> return ()
   where
     ttlFunc y@(Ttl x) = do
-      (do
-        let ttl = parseTtl x
-        liftIO $ threadDelay $ (ttl - (fromIntegral $ floor (fromIntegral ttl / fromIntegral 2))) * 1000000
-        let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
-        passHealthCheck client checkId dc) `catch` (\ e -> do
-           let _x :: SomeException = e
-           return ())
-      ttlFunc y
+      let ttl = parseTtl x
+      liftIO $ threadDelay $ (ttl - (fromIntegral $ floor (fromIntegral ttl / fromIntegral 2))) * 1000000
+      let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
+      passHealthCheck client checkId dc
 
 {- Session -}
 getSessionInfo :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
 getSessionInfo _client@ConsulClient{..} = I.getSessionInfo ccManager (I.hostWithScheme _client) ccPort
 
-withSession :: forall a m. (MonadIO m,MonadBaseControl IO m) => ConsulClient -> Session -> (Session -> m a) -> m a -> m a
-withSession client session action lostAction = do
-  var <- liftIO $ newEmptyTMVarIO
-  tidVar <- liftIO $ newEmptyTMVarIO
-  stid <- fork $ runThread var tidVar
-  tid <- fork $ action session >>= \ x -> liftIO $ atomically $ putTMVar var x
-  liftIO $ atomically $ putTMVar tidVar tid
-  ret <- liftIO $ atomically $ takeTMVar var
-  killThread stid
-  return ret
+withSession :: forall m a. (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
+withSession client@ConsulClient{..} name delay session action lostAction = do
+  mainFunc :: Async (StM m a) <- async $ action session
+  extendFunc :: Async (StM m a) <- async $ extendSession session
+  result :: a <- return . snd =<< waitAnyCancel [mainFunc,extendFunc]
+  I.destroySession ccManager (I.hostWithScheme client) ccPort session Nothing
+  return result
   where
-    runThread :: TMVar a -> TMVar ThreadId -> m ()
-    runThread var threadVar = do
-      liftIO $ threadDelay (10 * 1000000)
-      x <- getSessionInfo client (sId session) Nothing
+    extendSession :: Session -> m a
+    extendSession session = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
+      liftIO $ threadDelay $ (delay * 1000000)
+      x <- I.renewSession ccManager (I.hostWithScheme client) ccPort session Nothing
       case x of
-        Just [] -> cancelAction var threadVar
-        Nothing -> cancelAction var threadVar
-        Just _ -> runThread var threadVar
-
-    cancelAction :: TMVar a -> TMVar ThreadId -> m ()
-    cancelAction resultVar tidVar = do
-      tid <- liftIO $ atomically $ readTMVar tidVar
-      killThread tid
-      empty <- liftIO $ atomically $ isEmptyTMVar resultVar
-      if empty then do
-        result <- lostAction
-        liftIO $ atomically $ putTMVar resultVar result
-        return ()
-        else return ()
+        True -> extendSession session
+        False -> lostAction
 
 getSequencerForLock :: MonadIO m => ConsulClient -> Text -> Session -> Maybe Datacenter -> m (Maybe Sequencer)
 getSequencerForLock client key session datacenter = do
@@ -194,7 +170,7 @@ withSequencer :: (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient
 withSequencer client sequencer action lostAction delay dc = do
   mainFunc <- async action
   pulseFunc <- async pulseLock
-  waitAny [mainFunc, pulseFunc] >>= return . snd
+  waitAnyCancel [mainFunc, pulseFunc] >>= return . snd
   where
     pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
       liftIO $ threadDelay delay
@@ -202,42 +178,3 @@ withSequencer client sequencer action lostAction delay dc = do
       case valid of
         True -> pulseLock
         False -> lostAction
-
-{- Helper Functions -}
-{- ManagedSession is a session with an associated TTL healthcheck so the session will be terminated if the client dies. The healthcheck will be automatically updated. -}
-data ManagedSession = ManagedSession{
-  msSession :: Session,
-  msThreadId :: ThreadId
-}
-
-withManagedSession :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> Text -> (Session -> m ()) -> m () -> m ()
-withManagedSession client ttl action lostAction = do
-  x <- createManagedSession client Nothing ttl
-  case x of
-    Just s -> withSession client (msSession s) action lostAction >> destroyManagedSession client s
-    Nothing -> lostAction
-
-createManagedSession :: MonadIO m => ConsulClient -> Maybe Text -> Text -> m (Maybe ManagedSession)
-createManagedSession _client@ConsulClient{..} name ttl = do
-  let r = SessionRequest Nothing name Nothing [] (Just Release) (Just ttl)
-  s <- I.createSession ccManager (I.hostWithScheme _client) ccPort r Nothing
-  mapM f s
-  where
-    f x = do
-      tid <- liftIO $ forkIO $ runThread x
-      return $ ManagedSession x tid
-
-    saneTtl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
-
-    runThread :: Session -> IO ()
-    runThread s = do
-      threadDelay $ (saneTtl - (saneTtl - 10)) * 1000000
-      x <- (I.renewSession ccManager (I.hostWithScheme _client) ccPort s Nothing) `catch` (\ e -> print (e :: SomeException) >> return True)
-      case x of
-        True -> runThread s
-        False -> return ()
-
-destroyManagedSession :: MonadIO m => ConsulClient -> ManagedSession -> m ()
-destroyManagedSession _client@ConsulClient{..} (ManagedSession session tid) = do
-  liftIO $ killThread tid
-  I.destroySession ccManager (I.hostWithScheme _client) ccPort session Nothing

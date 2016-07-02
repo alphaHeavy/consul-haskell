@@ -65,10 +65,12 @@ test-suite consul-haskell-test
     consul-haskell,
     http-client,
     network,
+    random,
     tasty,
     tasty-hunit,
     text,
     transformers,
+    uuid,
     HUnit                      >= 1.2
   ghc-options:
     -Wall
