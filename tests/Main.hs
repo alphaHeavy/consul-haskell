@@ -153,7 +153,7 @@ testGetSessionInfo = testCase "testGetSessionInfo" $ do
   result <- I.createSession ccManager (I.hostWithScheme _client) ccPort req Nothing
   case result of
     Just x -> do
-      x1 <- I.getSessionInfo ccManager (I.hostWithScheme _client) ccPort (sId x) Nothing
+      x1 <- I.getSessionInfo ccManager (I.hostWithScheme _client) ccPort x Nothing
       case x1 of
         Just _ -> return ()
         Nothing -> assertFailure "testGetSessionInfo: Session Info was not returned"
@@ -190,7 +190,7 @@ testDestroySession = testCase "testDestroySession" $ do
   case result of
     Just x -> do
       _ <- I.destroySession ccManager (I.hostWithScheme _client) ccPort x Nothing
-      x1 <- I.getSessionInfo ccManager (I.hostWithScheme _client) ccPort (sId x) Nothing
+      x1 <- I.getSessionInfo ccManager (I.hostWithScheme _client) ccPort x Nothing
       assertBool "testDestroySession: Session info was returned after destruction" $ (x1 == Nothing) || (x1 == Just [])
     Nothing -> assertFailure "testDestroySession: No session was created"
 
@@ -206,7 +206,7 @@ testSessionMaintained = testCase "testSessionMaintained" $ do
   case result of
     Just session -> do
       threadDelay (12 * 1000000)
-      y <- getSessionInfo client (sId session) Nothing
+      y <- getSessionInfo client session Nothing
       assertEqual "testSessionMaintained: Session not found" True (isJust y)
     Nothing -> assertFailure "testSessionMaintained: No Session was created"
 
@@ -220,8 +220,8 @@ testWithSessionCancel = testCase "testWithSessionCancel" $ do
     Just session -> do
       x1 <- withSession client Nothing 5 session (\ y -> action y client ) cancelAction
       assertEqual "testWithSessionCancel: Incorrect value" "Canceled" x1
-      y <- getSessionInfo client (sId session) Nothing
-      assertEqual "testWithSessionCancel: Session was found" False (isJust y)
+      y <- getSessionInfo client session Nothing
+      assertBool "testWithSessionCancel: Session was found" $ (y == Nothing) || (y == Just [])
 
     Nothing -> assertFailure "testWithSessionCancel: No session was created"
 

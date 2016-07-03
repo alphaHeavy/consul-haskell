@@ -4,7 +4,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Network.Consul (
-    deleteKey
+    createSession
+  , deleteKey
+  , destroySession
   , getKey
   , getKeys
   , getSelf
@@ -21,6 +23,7 @@ module Network.Consul (
   , putKeyAcquireLock
   , putKeyReleaseLock
   , registerService
+  , renewSession
   , runService
   , withSequencer
   , withSession
@@ -131,8 +134,17 @@ runService client request action dc = do
       passHealthCheck client checkId dc
 
 {- Session -}
-getSessionInfo :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
-getSessionInfo _client@ConsulClient{..} = I.getSessionInfo ccManager (I.hostWithScheme _client) ccPort
+createSession :: MonadIO m => ConsulClient -> SessionRequest -> Maybe Datacenter -> m (Maybe Session)
+createSession client@ConsulClient{..} = I.createSession ccManager (I.hostWithScheme client) ccPort
+
+destroySession :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m ()
+destroySession client@ConsulClient{..} = I.destroySession ccManager (I.hostWithScheme client) ccPort
+
+renewSession :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m Bool
+renewSession client@ConsulClient{..} = I.renewSession ccManager (I.hostWithScheme client) ccPort
+
+getSessionInfo :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m (Maybe [SessionInfo])
+getSessionInfo client@ConsulClient{..} = I.getSessionInfo ccManager (I.hostWithScheme client) ccPort
 
 withSession :: forall m a. (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
 withSession client@ConsulClient{..} name delay session action lostAction = do

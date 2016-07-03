@@ -289,8 +289,8 @@ renewSession manager hostname portNumber (Session session _) dc = do
       x | x == status200 -> return True
       _ -> return False
 
-getSessionInfo :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m (Maybe [SessionInfo])
-getSessionInfo manager hostname portNumber session dc = do
+getSessionInfo :: MonadIO m => Manager -> Text -> PortNumber -> Session -> Maybe Datacenter -> m (Maybe [SessionInfo])
+getSessionInfo manager hostname portNumber (Session session _) dc = do
   req <- createRequest hostname portNumber (T.concat ["/v1/session/info/",session]) Nothing Nothing False dc
   liftIO $ withResponse req manager $ \ response -> do
     case responseStatus response of
