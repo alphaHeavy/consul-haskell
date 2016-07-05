@@ -220,11 +220,10 @@ testWithSessionCancel = testCase "testWithSessionCancel" $ do
     Just session -> do
       x1 <- withSession client Nothing 5 session (\ y -> action y client ) cancelAction
       assertEqual "testWithSessionCancel: Incorrect value" "Canceled" x1
-      y <- getSessionInfo client session Nothing
-      assertBool "testWithSessionCancel: Session was found" $ (y == Nothing) || (y == Just [])
+      z <- getSessionInfo client session Nothing
+      assertBool "testWithSessionCancel: Session was found" $ (z == Nothing) || (z == Just [])
 
     Nothing -> assertFailure "testWithSessionCancel: No session was created"
-
   where
     action :: MonadIO m => Session -> ConsulClient -> m Text
     action x client@ConsulClient{..} = do

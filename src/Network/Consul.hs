@@ -147,19 +147,17 @@ getSessionInfo :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m
 getSessionInfo client@ConsulClient{..} = I.getSessionInfo ccManager (I.hostWithScheme client) ccPort
 
 withSession :: forall m a. (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
-withSession client@ConsulClient{..} name delay session action lostAction = do
-  mainFunc :: Async (StM m a) <- async $ action session
-  extendFunc :: Async (StM m a) <- async $ extendSession session
-  result :: a <- return . snd =<< waitAnyCancel [mainFunc,extendFunc]
-  I.destroySession ccManager (I.hostWithScheme client) ccPort session Nothing
-  return result
+withSession client@ConsulClient{..} name delay session action lostAction = (do
+  withAsync (action session) $ \ mainAsync -> withAsync extendSession $ \ extendAsync -> do
+    result :: a <- return . snd =<< waitAnyCancel [mainAsync,extendAsync]
+    return result) `finally` (destroySession client session Nothing)
   where
-    extendSession :: Session -> m a
-    extendSession session = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
+    extendSession :: m a
+    extendSession = do
       liftIO $ threadDelay $ (delay * 1000000)
-      x <- I.renewSession ccManager (I.hostWithScheme client) ccPort session Nothing
+      x <- renewSession client session Nothing
       case x of
-        True -> extendSession session
+        True -> extendSession
         False -> lostAction
 
 getSequencerForLock :: MonadIO m => ConsulClient -> Text -> Session -> Maybe Datacenter -> m (Maybe Sequencer)
@@ -179,10 +177,9 @@ isValidSequencer client sequencer datacenter = do
     Nothing -> return False
 
 withSequencer :: (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
-withSequencer client sequencer action lostAction delay dc = do
-  mainFunc <- async action
-  pulseFunc <- async pulseLock
-  waitAnyCancel [mainFunc, pulseFunc] >>= return . snd
+withSequencer client sequencer action lostAction delay dc =
+  withAsync action $ \ mainAsync -> withAsync pulseLock $ \ pulseAsync -> do
+    waitAnyCancel [mainAsync, pulseAsync] >>= return . snd
   where
     pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
       liftIO $ threadDelay delay
