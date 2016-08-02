@@ -172,13 +172,17 @@ putKeyReleaseLock manager hostname portNumber request (Session session _) dc = d
     query = T.intercalate "&" $ catMaybes [flags,cas,Just release]
     fquery = if query /= T.empty then Just query else Nothing
 
-deleteKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Bool -> Maybe Datacenter -> m ()
+deleteKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Bool -> Maybe Datacenter -> m Bool
 deleteKey manager hostname portNumber key recurse dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", key]) (if recurse then Just "recurse" else Nothing) Nothing False dc
   let httpReq = initReq { method = "DELETE"}
   liftIO $ withResponse httpReq manager $ \ response -> do
-    _bodyParts <- brConsume $ responseBody response
-    return ()
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    case TE.decodeUtf8 body of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
 
 {- Agent -}
 {-getHealthChecks :: MonadIO m => Manager -> Text -> PortNumber -> Maybe Datacenter -> m [Check]

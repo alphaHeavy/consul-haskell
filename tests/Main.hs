@@ -7,7 +7,7 @@ import Control.Monad.IO.Class
 import Data.Maybe
 import Data.Text (Text)
 import Data.UUID
-import Network.Consul (getSessionInfo,initializeConsulClient,withSession,ConsulClient(..))
+import Network.Consul (deleteKey,getKey,getSessionInfo,initializeConsulClient,putKey,withSession,ConsulClient(..))
 import Network.Consul.Types
 import qualified Network.Consul.Internal as I
 import Network.HTTP.Client
@@ -22,7 +22,7 @@ client = initializeConsulClient "localhost" 8500 Nothing
 {- Internal Tests -}
 internalKVTests :: TestTree
 internalKVTests = testGroup "Internal Key Value" [testGetInvalidKey, testPutKey,
-  testGetKey,testGetKeys,testListKeys,testDeleteKey,testGetNullValueKey]
+  testGetKey,testGetKeys,testListKeys,testDeleteKey,testGetNullValueKey,testDeleteRecursive]
 
 testGetInvalidKey :: TestTree
 testGetInvalidKey = testCase "testGetInvalidKey" $ do
@@ -60,7 +60,6 @@ testGetNullValueKey = testCase "testGetNullValueKey" $ do
     Just x -> assertEqual "testGetNullValueKey: Incorrect Value" (kvValue x) Nothing
     Nothing -> assertFailure "testGetNullValueKey: No value returned"
 
-
 testGetKeys :: TestTree
 testGetKeys = testCase "testGetKeys" $ do
   _client@ConsulClient{..} <- client
@@ -91,9 +90,41 @@ testDeleteKey = testCase "testDeleteKey" $ do
   let put1 = KeyValuePut "/testDeleteKey" "Test" Nothing Nothing
   x1 <- I.putKey ccManager (I.hostWithScheme _client) ccPort put1 Nothing
   assertEqual "testDeleteKey: Write failed" True x1
-  I.deleteKey ccManager (I.hostWithScheme _client) ccPort "/testDeleteKey" False Nothing
-  x2 <- I.getKey ccManager (I.hostWithScheme _client) ccPort "/testDeleteKey" Nothing Nothing Nothing
-  assertEqual "testDeleteKey: Key was not deleted" Nothing x2
+  x2 <- I.deleteKey ccManager (I.hostWithScheme _client) ccPort "/testDeleteKey" False Nothing
+  assertEqual "testDeleteKey: Delete Failed" True x2
+  x3 <- I.getKey ccManager (I.hostWithScheme _client) ccPort "/testDeleteKey" Nothing Nothing Nothing
+  assertEqual "testDeleteKey: Key was not deleted" Nothing x3
+  print x3
+
+testDeleteRecursive :: TestTree
+testDeleteRecursive = testCase "testDeleteRecursive" $ do
+  _client@ConsulClient{..} <- client
+  let put1 = KeyValuePut "/testDeleteRecursive/1" "Test" Nothing Nothing
+      put2 = KeyValuePut "/testDeleteRecursive/2" "Test" Nothing Nothing
+  x1 <- I.putKey ccManager (I.hostWithScheme _client) ccPort put1 Nothing
+  assertEqual "testDeleteKey: Write failed" True x1
+  x2 <- I.putKey ccManager (I.hostWithScheme _client) ccPort put2 Nothing
+  assertEqual "testDeleteKey: Write failed" True x2
+  I.deleteKey ccManager (I.hostWithScheme _client) ccPort "/testDeleteRecursive/" True Nothing
+  x3 <- I.getKey ccManager (I.hostWithScheme _client) ccPort "/testDeleteRecursive/1" Nothing Nothing Nothing
+  assertEqual "testDeleteKey: Key was not deleted" Nothing x3
+
+{- Client KV -}
+clientKVTests :: TestTree
+clientKVTests = testGroup "Client KV Tests" [testDeleteRecursiveClient]
+
+testDeleteRecursiveClient :: TestTree
+testDeleteRecursiveClient = testCase "testDeleteRecursiveClient" $ do
+  c <- client
+  let put1 = KeyValuePut "/testDeleteRecursive/1" "Test" Nothing Nothing
+      put2 = KeyValuePut "/testDeleteRecursive/2" "Test" Nothing Nothing
+  x1 <- putKey c put1 Nothing
+  assertEqual "testDeleteKey: Write failed" True x1
+  x2 <- putKey c put2 Nothing
+  assertEqual "testDeleteKey: Write failed" True x2
+  deleteKey c "/testDeleteRecursive/" True Nothing
+  x3 <- getKey c "/testDeleteRecursive/1" Nothing Nothing Nothing
+  assertEqual "testDeleteKey: Key was not deleted" Nothing x3
 
 {- Agent -}
 testRegisterService :: TestTree
@@ -242,7 +273,7 @@ agentTests :: TestTree
 agentTests = testGroup "Agent Tests" [testGetSelf,testRegisterService]
 
 allTests :: TestTree
-allTests = testGroup "All Tests" [testInternalSession, internalKVTests, sessionWorkflowTests, agentTests,testHealth]
+allTests = testGroup "All Tests" [testInternalSession, internalKVTests, sessionWorkflowTests, agentTests,testHealth, clientKVTests]
 
 main :: IO ()
 main = defaultMain allTests

@@ -89,7 +89,7 @@ putKeyAcquireLock _client@ConsulClient{..} = I.putKeyAcquireLock ccManager (I.ho
 putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
 putKeyReleaseLock _client@ConsulClient{..} = I.putKeyReleaseLock ccManager (I.hostWithScheme _client) ccPort
 
-deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m ()
+deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m Bool
 deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager (I.hostWithScheme _client) ccPort key
 
 {- Health Checks -}
