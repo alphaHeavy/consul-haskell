@@ -65,12 +65,12 @@ createRequest hostWithScheme portNumber endpoint query body wait dc = do
                          ,maybe "" id query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
   initReq <- liftIO $ parseUrl $ T.unpack baseUrl
   case body of
-    Just x -> return $ indef $ initReq{ method = "PUT", requestBody = RequestBodyBS x, checkStatus = \ _ _ _ -> Nothing}
-    Nothing -> return $ indef $ initReq{checkStatus = \ _ _ _ -> Nothing}
+    Just x -> return $ indef $ initReq{ method = "PUT", requestBody = RequestBodyBS x}
+    Nothing -> return $ indef initReq
   where
     needQueryString = if isJust dc || isJust query then "?" else ""
     prefixAnd = if isJust query && isJust dc then "&" else ""
-    indef req = if wait == True then req{responseTimeout = Nothing} else req
+    indef req = if wait == True then req{responseTimeout = responseTimeoutNone} else req
 
 {- Key Value Store -}
 getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe Network.Consul.Types.KeyValue)
