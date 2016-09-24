@@ -7,10 +7,12 @@ module Network.Consul (
     createSession
   , deleteKey
   , destroySession
+  , deregisterService
   , getKey
   , getKeys
   , getSelf
   , getService
+  , getServices
   , getServiceHealth
   , getSessionInfo
   , getSequencerForLock
@@ -25,7 +27,6 @@ module Network.Consul (
   , registerService
   , renewSession
   , runService
-  , withSequencer
   , withSession
   , module Network.Consul.Types
 ) where
@@ -103,9 +104,15 @@ getServiceHealth _client@ConsulClient{..} = I.getServiceHealth ccManager (I.host
 getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
 getService _client@ConsulClient{..} = I.getService ccManager (I.hostWithScheme _client) ccPort
 
+getServices :: MonadIO m => ConsulClient -> Maybe Text -> Maybe Datacenter -> m [Text]
+getServices _client@ConsulClient{..} = I.getServices ccManager (I.hostWithScheme _client) ccPort
+
 {- Agent -}
 getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
 getSelf _client@ConsulClient{..} = I.getSelf ccManager (I.hostWithScheme _client) ccPort
+
+deregisterService :: MonadIO m => ConsulClient -> Text -> m ()
+deregisterService _client@ConsulClient{..} = I.deregisterService ccManager (I.hostWithScheme _client) ccPort 
 
 registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
 registerService _client@ConsulClient{..} = I.registerService ccManager (I.hostWithScheme _client) ccPort
@@ -175,7 +182,7 @@ isValidSequencer client sequencer datacenter = do
   case mkv of
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
-
+{- 
 withSequencer :: (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
 withSequencer client sequencer action lostAction delay dc =
   withAsync action $ \ mainAsync -> withAsync pulseLock $ \ pulseAsync -> do
@@ -187,3 +194,4 @@ withSequencer client sequencer action lostAction delay dc =
       case valid of
         True -> pulseLock
         False -> lostAction
+-}
