@@ -68,23 +68,23 @@ createRequest hostWithScheme portNumber endpoint query body wait dc = do
   let baseUrl = T.concat [hostWithScheme,":",T.pack $ show portNumber,endpoint,needQueryString
                          ,maybe "" id query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
   initReq <- liftIO $ parseUrl $ T.unpack baseUrl
-  #if MIN_VERSION_http_client(0,5,0)
+#if MIN_VERSION_http_client(0,5,0)
   case body of
       Just x -> return $ indef $ initReq{ method = "PUT", requestBody = RequestBodyBS x, checkResponse = \ _ _ -> return ()}
       Nothing -> return $ indef $ initReq{checkResponse = \ _ _ -> return ()}
-  #else
+#else
   case body of
     Just x -> return $ indef $ initReq{ method = "PUT", requestBody = RequestBodyBS x, checkStatus = \ _ _ _ -> Nothing}
     Nothing -> return $ indef $ initReq{checkStatus = \ _ _ _ -> Nothing}
-  #endif
+#endif
   where
     needQueryString = if isJust dc || isJust query then "?" else ""
     prefixAnd = if isJust query && isJust dc then "&" else ""
-  #if MIN_VERSION_http_client(0,5,0)
+#if MIN_VERSION_http_client(0,5,0)
     indef req = if wait == True then req{responseTimeout = responseTimeoutNone} else req
-  #else
+#else
     indef req = if wait == True then req{responseTimeout = Nothing} else req
-  #endif
+#endif
 
 {- Key Value Store -}
 getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe Network.Consul.Types.KeyValue)
@@ -348,5 +348,3 @@ getServices manager hostname portNumber tag dc = do
     filterTags :: Maybe Text -> [(Text, Value)] -> [Text]
     filterTags (Just t)               = map fst . filter (\ (_, (Array v)) -> (String t) `V.elem` v)
     filterTags Nothing                = map fst
-
-
