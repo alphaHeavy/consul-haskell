@@ -35,6 +35,7 @@ import Control.Concurrent hiding (killThread)
 import Control.Concurrent.Async.Lifted
 import Control.Concurrent.STM
 import Control.Exception.Lifted
+import Control.Monad (forever)
 import Control.Monad.IO.Class
 import Control.Monad.Catch (MonadMask)
 import Control.Monad.Trans.Control
@@ -112,7 +113,7 @@ getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
 getSelf _client@ConsulClient{..} = I.getSelf ccManager (I.hostWithScheme _client) ccPort
 
 deregisterService :: MonadIO m => ConsulClient -> Text -> m ()
-deregisterService _client@ConsulClient{..} = I.deregisterService ccManager (I.hostWithScheme _client) ccPort 
+deregisterService _client@ConsulClient{..} = I.deregisterService ccManager (I.hostWithScheme _client) ccPort
 
 registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
 registerService _client@ConsulClient{..} = I.registerService ccManager (I.hostWithScheme _client) ccPort
@@ -123,11 +124,14 @@ runService client request action dc = do
   case r of
     True -> do
       mainFunc <- async action
+
+      --this is here instead of the where to prevent typechecking nastiness
       checkAction <- case rsCheck request of
                       Just(x@(Ttl _)) -> do
-                        a <- async $ ttlFunc x
+                        a <- async $ forever $ ttlFunc x
                         return $ Just a
                       _ -> return Nothing
+
       _foo :: () <- wait mainFunc --prevent: 'StM’ is a type function, and may not be injective
       case checkAction of
         Just a -> cancel a
@@ -182,7 +186,7 @@ isValidSequencer client sequencer datacenter = do
   case mkv of
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
-{- 
+
 withSequencer :: (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
 withSequencer client sequencer action lostAction delay dc =
   withAsync action $ \ mainAsync -> withAsync pulseLock $ \ pulseAsync -> do
@@ -194,4 +198,3 @@ withSequencer client sequencer action lostAction delay dc =
       case valid of
         True -> pulseLock
         False -> lostAction
--}

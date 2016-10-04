@@ -7,7 +7,7 @@ import Control.Monad.IO.Class
 import Data.Maybe
 import Data.Text (Text)
 import Data.UUID
-import Network.Consul (deleteKey,getKey,getSessionInfo,initializeConsulClient,putKey,withSession,ConsulClient(..))
+import Network.Consul (deleteKey,getKey,getSessionInfo,initializeConsulClient,putKey,withSession,ConsulClient(..),runService,getServiceHealth)
 import Network.Consul.Types
 import qualified Network.Consul.Internal as I
 import Network.HTTP.Client
@@ -94,7 +94,6 @@ testDeleteKey = testCase "testDeleteKey" $ do
   assertEqual "testDeleteKey: Delete Failed" True x2
   x3 <- I.getKey ccManager (I.hostWithScheme _client) ccPort "/testDeleteKey" Nothing Nothing Nothing
   assertEqual "testDeleteKey: Key was not deleted" Nothing x3
-  print x3
 
 testDeleteRecursive :: TestTree
 testDeleteRecursive = testCase "testDeleteRecursive" $ do
@@ -133,6 +132,10 @@ testRegisterService = testCase "testRegisterService" $ do
   let req = RegisterService Nothing "testService" ["test"] Nothing (Just $ Ttl "10s")
   val <- I.registerService ccManager (I.hostWithScheme _client) ccPort req Nothing
   assertEqual "testRegisterService: Service was not created" val True
+  mService <- I.getService ccManager (I.hostWithScheme _client) ccPort "testService" Nothing Nothing
+  case mService of
+    Just _ -> return ()
+    Nothing -> assertFailure "testRegisterService: Service was not found"
 
 testGetSelf :: TestTree
 testGetSelf = testCase "testGetSelf" $ do
@@ -266,14 +269,35 @@ testWithSessionCancel = testCase "testWithSessionCancel" $ do
     cancelAction = return ("Canceled" :: Text)
 
 
+testRunServiceTtl :: TestTree
+testRunServiceTtl = testCase "testRunServiceTtl" $ do
+  client@ConsulClient{..} <- initializeConsulClient "localhost" 8500 Nothing
+  let register = RegisterService Nothing "testRunServiceTtl" [] (Just 8000) $ Just $ Ttl "10s"
+  runService client register (action client) Nothing
+  where
+    action client = do
+      threadDelay 15000000
+      mHealth <- getServiceHealth client "testRunServiceTtl"
+      case mHealth of
+        Nothing -> assertFailure "testRunServiceTtl: No healthcheck was found"
+        Just [x] -> do
+          let checks = hChecks x
+          mapM_ (testCheck) checks
+    testCheck check = do
+      assertBool "testRunServiceTtl: Check not passing" $ cStatus check == Passing
+
+
 sessionWorkflowTests :: TestTree
 sessionWorkflowTests = testGroup "Session Workflow Tests" [testWithSessionCancel,testSessionMaintained]
+
+runServiceTests :: TestTree
+runServiceTests = testGroup "Run Service Tests" [testRunServiceTtl]
 
 agentTests :: TestTree
 agentTests = testGroup "Agent Tests" [testGetSelf,testRegisterService]
 
 allTests :: TestTree
-allTests = testGroup "All Tests" [testInternalSession, internalKVTests, sessionWorkflowTests, agentTests,testHealth, clientKVTests]
+allTests = testGroup "All Tests" [testInternalSession, internalKVTests, sessionWorkflowTests, agentTests,testHealth, clientKVTests, runServiceTests]
 
 main :: IO ()
 main = defaultMain allTests
