@@ -1,6 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+#if __GLASGOW_HASKELL__ < 710
+{-# LANGUAGE OverlappingInstances #-}
+#endif
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Consul.Types (
   Check(..),
@@ -292,7 +295,11 @@ instance ToJSON HealthCheck where
 instance ToJSON SessionRequest where
   toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (fmap nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
 
-instance ToJSON (Either (Text,Text) Text) where
+instance
+#if __GLASGOW_HASKELL__ >= 710
+    {-# OVERLAPPING #-}
+#endif
+    ToJSON (Either (Text,Text) Text) where
   toJSON (Left (script,interval)) = object ["Script" .= script, "Interval" .= interval]
   toJSON (Right ttl) = object ["TTL" .= ttl]
 
