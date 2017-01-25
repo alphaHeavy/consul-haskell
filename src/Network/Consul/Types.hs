@@ -292,10 +292,6 @@ instance ToJSON HealthCheck where
 instance ToJSON SessionRequest where
   toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (fmap nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
 
-instance ToJSON (Either (Text,Text) Text) where
-  toJSON (Left (script,interval)) = object ["Script" .= script, "Interval" .= interval]
-  toJSON (Right ttl) = object ["TTL" .= ttl]
-
 instance ToJSON ServiceResult where
   toJSON (ServiceResult node addr sid sName sTags sAddress sPort) = object["Node" .= node, "Address" .= addr, "ServiceID" .= sid, "ServiceName" .= sName, "ServiceTags" .= sTags, "ServiceAddress" .= sAddress, "ServicePort" .= sPort]
 
