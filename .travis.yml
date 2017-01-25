@@ -116,7 +116,7 @@ before_install:
 - PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
 
 # Install Consul
-- curl 'https://releases.hashicorp.com/consul/0.6.3/consul_0.6.3_linux_amd64.zip'
+- curl -v 'https://releases.hashicorp.com/consul/0.6.3/consul_0.6.3_linux_amd64.zip'
 - unzip "consul_0.6.3_linux_amd64.zip"
 
 install:
