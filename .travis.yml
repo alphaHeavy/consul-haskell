@@ -2,6 +2,7 @@
 # named .travis.yml
 
 # Use new container infrastructure to enable caching
+dist: trusty
 sudo: false
 
 # Choose a lightweight base image; we provide our own build tools.
