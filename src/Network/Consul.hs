@@ -28,6 +28,7 @@ module Network.Consul (
   , renewSession
   , runService
   , withSession
+  , withSequencer
   , module Network.Consul.Types
 ) where
 
