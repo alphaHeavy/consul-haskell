@@ -1,0 +1,8 @@
+version: '2'
+
+services:
+  consul:
+    command: -server -bootstrap
+    image: progrium/consul:latest
+    ports:
+      - "8500:8500"
