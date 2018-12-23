@@ -49,8 +49,8 @@ import Data.Traversable
 import Data.Word
 import qualified Network.Consul.Internal as I
 import Network.Consul.Types
-import Network.HTTP.Client (defaultManagerSettings, newManager, Manager)
-import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Network.HTTP.Client (Manager)
+import Network.HTTP.Client.TLS (newTlsManager, newTlsManagerWith, tlsManagerSettings)
 import Network.Socket (PortNumber)
 
 
@@ -63,14 +63,14 @@ initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m 
 initializeConsulClient hostname port man = do
   manager <- liftIO $ case man of
                         Just x -> return x
-                        Nothing -> newManager defaultManagerSettings
+                        Nothing -> newTlsManager
   return $ ConsulClient manager hostname port False
 
 initializeTlsConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
 initializeTlsConsulClient hostname port man = do
     manager <- liftIO $ case man of
                         Just x -> return x
-                        Nothing -> newManager tlsManagerSettings
+                        Nothing -> newTlsManagerWith tlsManagerSettings
     return $ ConsulClient manager hostname port True
 
 {- Key Value -}
