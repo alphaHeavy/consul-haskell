@@ -12,8 +12,7 @@ module Network.Consul.Internal (
   , getKeys
   , listKeys
   , putKey
-  , putKeyAcquireLock
-  , putKeyReleaseLock
+  , putKeyAcquireLock , putKeyReleaseLock
 
   --Agent
   , deregisterHealthCheck
@@ -136,13 +135,18 @@ listKeys manager hostname portNumber prefix index consistency dc = do
     query = T.intercalate "&" $ catMaybes [cons,ind, Just "keys"]
     fquery = if query /= T.empty then Just query else Nothing
 
+
+decodeAndStrip :: ByteString -> String
+decodeAndStrip = T.unpack . T.strip . TE.decodeUtf8
+
 putKey :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Maybe Datacenter -> m Bool
 putKey manager hostname portNumber request dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", kvpKey request]) fquery (Just $ kvpValue request) False dc
   liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
-    case TE.decodeUtf8 body of
+    let result = decodeAndStrip body
+    case result of
       "true" -> return True
       "false" -> return False
       _ -> return False
@@ -152,13 +156,16 @@ putKey manager hostname portNumber request dc = do
     query = T.intercalate "&" $ catMaybes [flags,cas]
     fquery = if query /= T.empty then Just query else Nothing
 
+
+
 putKeyAcquireLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
 putKeyAcquireLock manager hostname portNumber request (Session session _) dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", kvpKey request]) fquery (Just $ kvpValue request) False dc
   liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
-    case TE.decodeUtf8 body of
+    let result = decodeAndStrip body
+    case result of
       "true" -> return True
       "false" -> return False
       _ -> return False
@@ -175,7 +182,8 @@ putKeyReleaseLock manager hostname portNumber request (Session session _) dc = d
   liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
-    case TE.decodeUtf8 body of
+    let result = decodeAndStrip body
+    case result of
       "true" -> return True
       "false" -> return False
       _ -> return False
@@ -193,7 +201,8 @@ deleteKey manager hostname portNumber key recurse dc = do
   liftIO $ withResponse httpReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
-    case TE.decodeUtf8 body of
+    let result = decodeAndStrip body
+    case result of
       "true" -> return True
       "false" -> return False
       _ -> return False
