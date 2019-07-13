@@ -16,8 +16,11 @@ import System.Random
 import Test.Tasty
 import Test.Tasty.HUnit
 
+consulPort :: PortNumber
+consulPort = 18500
+
 newClient :: IO ConsulClient
-newClient = initializeConsulClient "localhost" 8500 Nothing
+newClient = initializeConsulClient "localhost" consulPort Nothing
 
 {- Internal Tests -}
 internalKVTests :: TestTree
@@ -325,12 +328,12 @@ testRunServiceTtl = testCase "testRunServiceTtl" $ do
 
 {-testSequencerLostSession :: TestTree
 testSequencerLostSession = testCase "testSequencerLostSession" $ do
-  client@ConsulClient{..} <- initializeConsulClient "localhost" 8500 Nothing
+  client@ConsulClient{..} <- initializeConsulClient "localhost" consulPort Nothing
 -}
 
 testIsValidSequencer :: TestTree
 testIsValidSequencer = testCase "testIsValidSequencer" $ do
-  client@ConsulClient{..} <- initializeConsulClient "localhost" 8500 Nothing
+  client@ConsulClient{..} <- initializeConsulClient "localhost" consulPort Nothing
   let req = SessionRequest Nothing (Just "testIsValidSequencer") Nothing ["serfHealth"] (Just Release) (Just "10s")
   result <- createSession client req Nothing
   case result of
