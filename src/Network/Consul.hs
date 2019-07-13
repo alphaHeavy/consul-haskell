@@ -33,30 +33,26 @@ module Network.Consul (
 ) where
 
 import Control.Concurrent hiding (killThread)
-import Control.Concurrent.Async.Lifted
-import Control.Concurrent.STM
-import Control.Exception.Lifted
 import Control.Monad (forever)
 import Control.Monad.IO.Class
 import Control.Monad.Catch (MonadMask)
-import Control.Monad.Trans.Control
 import Control.Retry
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR
-import Data.Traversable
 import Data.Word
 import qualified Network.Consul.Internal as I
 import Network.Consul.Types
 import Network.HTTP.Client (Manager)
 import Network.HTTP.Client.TLS (newTlsManager, newTlsManagerWith, tlsManagerSettings)
 import Network.Socket (PortNumber)
+import UnliftIO (MonadUnliftIO, async, cancel, finally, wait, waitAnyCancel, withAsync)
 
 
 import Prelude hiding (mapM)
 
-parseTtl :: forall t. Integral t => Text -> t
+parseTtl :: Integral t => Text -> t
 parseTtl ttl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
 
 initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
@@ -119,7 +115,7 @@ deregisterService _client@ConsulClient{..} = I.deregisterService ccManager (I.ho
 registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
 registerService _client@ConsulClient{..} = I.registerService ccManager (I.hostWithScheme _client) ccPort
 
-runService :: (MonadBaseControl IO m, MonadIO m) => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
+runService :: MonadUnliftIO m => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
 runService client request action dc = do
   r <- registerService client request dc
   case r of
@@ -158,7 +154,7 @@ renewSession client@ConsulClient{..} = I.renewSession ccManager (I.hostWithSchem
 getSessionInfo :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m (Maybe [SessionInfo])
 getSessionInfo client@ConsulClient{..} = I.getSessionInfo ccManager (I.hostWithScheme client) ccPort
 
-withSession :: forall m a. (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
+withSession :: forall m a. (MonadMask m, MonadUnliftIO m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
 withSession client@ConsulClient{..} name delay session action lostAction = (do
   withAsync (action session) $ \ mainAsync -> withAsync extendSession $ \ extendAsync -> do
     result :: a <- return . snd =<< waitAnyCancel [mainAsync,extendAsync]
@@ -188,7 +184,7 @@ isValidSequencer client sequencer datacenter = do
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
 
-withSequencer :: (MonadBaseControl IO m, MonadIO m, MonadMask m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
+withSequencer :: (MonadMask m, MonadUnliftIO m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
 withSequencer client sequencer action lostAction delay dc =
   withAsync action $ \ mainAsync -> withAsync pulseLock $ \ pulseAsync -> do
     waitAnyCancel [mainAsync, pulseAsync] >>= return . snd

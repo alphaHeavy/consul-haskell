@@ -40,14 +40,12 @@ library
     http-client,
     http-client-tls,
     http-types,
-    lifted-async,
-    lifted-base,
-    monad-control >= 1.0,
     network,
     retry,
     stm,
     text,
     transformers,
+    unliftio >= 0.2.4,
     unordered-containers,
     vector
   ghc-options:
