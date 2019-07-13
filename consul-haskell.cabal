@@ -60,16 +60,22 @@ test-suite consul-haskell-test
     exitcode-stdio-1.0
   main-is:
     Main.hs
+  other-modules:
+    SocketUtils
   build-depends:
     base                       >= 4.6 && < 5,
+    bytestring,
     consul-haskell,
     http-client,
     network,
     random,
+    retry,
     tasty,
     tasty-hunit,
     text,
     transformers,
+    typed-process,
+    unliftio,
     uuid,
     HUnit                      >= 1.2
   ghc-options:

@@ -1,9 +1,14 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Concurrent
+import Control.Monad (when)
 import Control.Monad.IO.Class
+import Control.Retry
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
 import Data.Maybe
 import Data.Text (Text)
 import Data.UUID
@@ -12,9 +17,15 @@ import Network.Consul.Types
 import qualified Network.Consul.Internal as I
 import Network.HTTP.Client
 import Network.Socket (PortNumber(..))
+import System.IO (hFlush)
+import System.Process.Typed (proc, stopProcess)
+import qualified System.Process.Typed as PT
 import System.Random
 import Test.Tasty
 import Test.Tasty.HUnit
+import UnliftIO.Temporary (withSystemTempFile)
+
+import SocketUtils (isPortOpen, simpleSockAddr)
 
 consulPort :: PortNumber
 consulPort = 18500
@@ -365,5 +376,39 @@ sequencerTests = testGroup "Sequencer Tests" [testIsValidSequencer]
 allTests :: TestTree
 allTests = testGroup "All Tests" [testInternalSession, internalKVTests, sessionWorkflowTests, agentTests,testHealth, clientKVTests, runServiceTests, sequencerTests]
 
+-- Backwards compatible `withProcessTerm`.
+withProcessTerm :: PT.ProcessConfig stdin stdout stderr -> (PT.Process stdin stdout stderr -> IO a) -> IO a
+#if MIN_VERSION_typed_process(0,2,5)
+withProcessTerm = PT.withProcessTerm
+#else
+withProcessTerm = PT.withProcess
+#endif
+
+waitForConsulOrFail :: IO ()
+waitForConsulOrFail = do
+  success <-
+    retrying
+      (constantDelay 50000 <> limitRetries 100) -- 100 times, 50 ms each
+      (\_status isOpen -> return (not isOpen)) -- when to retry
+      $ \_status -> do
+        isPortOpen $ (simpleSockAddr (127,0,0,1) consulPort)
+  when (not success) $ do
+    error $ "Could not connect to Consul within reasonable time"
+
 main :: IO ()
-main = defaultMain allTests
+main = do
+  -- We use a non-standard port in the test suite and spawn consul there,
+  -- to ensure that the test suite doesn't mess with real consul deployments.
+  withSystemTempFile "haskell-consul-test-config.json" $ \configFilePath h -> do
+    BS8.hPutStrLn h "{ \"disable_update_check\": true }" >> hFlush h
+    let consulProc =
+          proc
+            "consul"
+            [ "agent", "-dev"
+            , "-log-level", "err"
+            , "-http-port", show (fromIntegral consulPort :: Int)
+            , "-config-file", configFilePath
+            ]
+    withProcessTerm consulProc $ \_p -> do
+      waitForConsulOrFail
+      defaultMain allTests
