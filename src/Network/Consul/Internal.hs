@@ -231,7 +231,17 @@ deregisterHealthCheck manager hostname portNumber checkId = do
 
 passHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m ()
 passHealthCheck manager hostname portNumber checkId dc = do
-  initReq <- createRequest hostname portNumber (T.concat ["/v1/agent/check/pass/", checkId]) Nothing Nothing False dc
+  -- Using `Just ""` as the `body` to ensure a PUT request is used.
+  -- Consul < 1.0 accepted a GET here (which was a legacy mistake).
+  -- In 1.0, they switched it to require a PUT.
+  -- See also:
+  --   * https://github.com/hashicorp/consul/issues/3659
+  --   * https://github.com/cablehead/python-consul/pull/182
+  --   * https://github.com/hashicorp/consul/blob/51ea240df8476e02215d53fbfad5838bf0d44d21/CHANGELOG.md
+  --     Section "HTTP Verbs are Enforced in Many HTTP APIs":
+  --     > Many endpoints in the HTTP API that previously took any HTTP verb
+  --     > now check for specific HTTP verbs and enforce them.
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/agent/check/pass/", checkId]) Nothing (Just "") False dc
   liftIO $ withResponse initReq manager $ \ response -> do
     return ()
 
