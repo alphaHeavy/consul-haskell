@@ -2,4 +2,5 @@ flags: {}
 packages:
 - '.'
 extra-deps: []
+# When bumping the resolver, update the GHC version in shell.nix accordingly.
 resolver: lts-13.27
