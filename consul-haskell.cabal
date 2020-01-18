@@ -1,10 +1,10 @@
 name:                consul-haskell
-version:             0.4.2
+version:             0.5.0
 synopsis:            A consul client for Haskell
 description:
   A consul client for Haskell
   .
-  Requires consul 0.5 or later.
+  Requires consul 0.5 or later. Tested with consul 1.6.
 
 license:             BSD3
 license-file:        LICENSE
@@ -31,7 +31,7 @@ library
     Network.Consul.Types
   build-depends:
     aeson,
-    base                       >= 4.7 && < 5,
+    base                       >= 4.10 && < 5,
     base64-bytestring,
     bytestring,
     connection,
