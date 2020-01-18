@@ -10,6 +10,11 @@ import Control.Retry
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import Data.Maybe
+#if MIN_VERSION_base(4,11,0)
+-- (<>) is part of Prelude
+#else
+import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import Data.UUID
 import Network.Consul (createSession, deleteKey, destroySession,getKey, getSequencerForLock,getSessionInfo,initializeConsulClient, isValidSequencer,putKey,putKeyAcquireLock,withSession,ConsulClient(..),runService,getServiceHealth)
