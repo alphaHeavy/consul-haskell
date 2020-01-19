@@ -365,6 +365,11 @@ testIsValidSequencer = testCase "testIsValidSequencer" $ do
       result2 <- isValidSequencer client sequencer Nothing
       assertEqual "testIsValidSequencer: Invalid session was valid" False result2
 
+--testAclCreatePolicy :: TestTree
+--testAclCreatePolicy = testCase "testAclCreatePolicy" $ do
+--  client@ConsulClient{..} <- newClient
+--  -- define new tests here
+
 
 sessionWorkflowTests :: TestTree
 sessionWorkflowTests = testGroup "Session Workflow Tests" [testWithSessionCancel,testSessionMaintained]

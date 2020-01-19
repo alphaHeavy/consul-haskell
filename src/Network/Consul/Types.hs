@@ -3,6 +3,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Consul.Types (
+  AclPolicy(..),
+  AclPolicyPut(..),
   Check(..),
   Config(..),
   Consistency(..),
@@ -39,6 +41,34 @@ import qualified Data.Text.Encoding as TE
 import Data.Word
 import Network.HTTP.Client (Manager)
 import Network.Socket
+
+data AclPolicy = AclPolicy {
+  aclPolicyId :: Text,
+  aclPolicyName :: Text,
+  aclPolicyDescription :: Text,
+  aclPolicyRules :: Text,
+  aclPolicyDatacenters :: [Text],
+  aclPolicyHash :: Text,
+  aclPolicyCreateIndex :: Word64,
+  aclPolicyModifyIndex :: Word64
+} deriving (Eq, Ord, Show)
+
+data AclPolicyPut = AclPolicyPut {
+  aclPolicyName :: Text,
+  aclPolicyDescription :: Maybe Text
+  aclPolicyRules :: Maybe Text,
+  aclPolicyDatacenters :: Maybe [Text],
+  aclPolicyNamespace :: Maybe Text
+} deriving (Eq, Ord, Show)
+
+--data AclPolicyUpdate = AclPolicyUpdate {
+--  aclPolicyId :: Text,
+--  aclPolicyName :: Text,
+--  aclPolicyDescription :: Maybe Text
+--  aclPolicyRules :: Maybe Text,
+--  aclPolicyDatacenters :: Maybe [Text],
+--  aclPolicyNamespace :: Maybe Text
+--} deriving (Eq, Ord, Show)
 
 data ConsulClient = ConsulClient{
   ccManager :: Manager,
@@ -202,6 +232,19 @@ data Health = Health {
 
 
 {- JSON Instances -}
+instance FromJSON AclPolicy where
+  parseJSON (Object v) =
+    AclPolicy
+      <$> v .: "ID"
+      <*> v .: "Name"
+      <*> v .: "Description"
+      <*> v .: "Rules"
+      <*> v .: "Datacenters"
+      <*> v .: "Hash"
+      <*> v .: "CreateIndex"
+      <*> v .: "ModifyIndex"
+  parseJSON _ = mzero
+
 instance FromJSON Self where
   parseJSON (Object v) = Self <$> v .: "Member"
   parseJSON _ = mzero

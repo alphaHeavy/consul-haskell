@@ -3,8 +3,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Consul.Internal (
+  --ACL Policies
+    createPolicy
+  , deletePolicy
+  , getPolicy
+  , listPolicies
+  , updatePolicy
+
   --Client
-    hostWithScheme
+  , hostWithScheme
 
   --Key-Value Store
   , deleteKey
@@ -74,6 +81,64 @@ createRequest hostWithScheme portNumber endpoint query body wait dc = do
     needQueryString = if isJust dc || isJust query then "?" else ""
     prefixAnd = if isJust query && isJust dc then "&" else ""
     indef req = if wait == True then req{responseTimeout = responseTimeoutNone} else req
+
+{- ACL Policies -}
+createPolicy :: MonadIO m => Manager -> Text -> PortNumber -> AclPolicyPut -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m Bool
+createPolicy manager hostname portNumber policy dc = do
+  initReq <- createRequest hostname portNumber "/v1/acl/policy/" Nothing policy False dc
+  liftIO $ withResponse initReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+
+
+deletePolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m Bool
+deletePolicy manager hostname portnumber policyId dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/acl/policy",policyId]) Nothing Nothing False dc
+  let httpReq = initReq { method = "DELETE"}
+  liftIO $ withResponse httpReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+
+
+getPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe Network.Consul.Types.AclPolicy)
+getPolicy manager hostname portnumber policyId dc = do
+  request <- createRequest hostname portnumber (T.concat ["/v1/acl/policy/",policyId]) Nothing Nothing False dc
+  liftIO $ withResponse request manager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ listToMaybe =<< (decode $ BL.fromStrict body)
+      _ -> return Nothing
+
+
+-- TODO: IMPLEMENT
+--listPolicies
+--listPolicies
+
+
+putPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> AclPolicyPut -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m Bool
+putPolicy manager hostname portNumber policyId policy dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/acl/policy/", policyId]) Nothing policy False dc
+  liftIO $ withResponse initReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+
 
 {- Key Value Store -}
 getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe Network.Consul.Types.KeyValue)
@@ -145,7 +210,6 @@ putKey manager hostname portNumber request dc = do
     cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex request
     query = T.intercalate "&" $ catMaybes [flags,cas]
     fquery = if query /= T.empty then Just query else Nothing
-
 
 
 putKeyAcquireLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
