@@ -15,11 +15,31 @@ import Data.Maybe
 #else
 import Data.Monoid ((<>))
 #endif
+import Data.ByteString (pack)
 import Data.Text (Text)
 import Data.UUID
-import Network.Consul (createSession, deleteKey, destroySession,getKey, getSequencerForLock,getSessionInfo,initializeConsulClient, isValidSequencer,putKey,putKeyAcquireLock,withSession,ConsulClient(..),runService,getServiceHealth)
+
+import Network.Consul
+  ( createAclPolicy
+  , createSession
+  , deleteKey
+  , destroySession
+  , getKey
+  , getSequencerForLock
+  , getSessionInfo
+  , initializeConsulClient
+  , isValidSequencer
+  , putKey
+  , putKeyAcquireLock
+  , withSession
+  , ConsulClient(..)
+  , runService
+  , getServiceHealth
+  )
 import Network.Consul.Types
+
 import qualified Network.Consul.Internal as I
+
 import Network.HTTP.Client
 import Network.Socket (PortNumber(..))
 import System.IO (hFlush)
@@ -90,7 +110,6 @@ testPutKeyReleaseLock = testCase "testPutKeyReleaseLock" $ do
       assertEqual "testPutKeyReleaseLock: Release failed" True x2
       Just kv2 <- I.getKey ccManager (I.hostWithScheme client) ccPort "/testPutKeyReleaseLock" Nothing Nothing Nothing
       assertEqual "testPutKeyAcquireLock: Session still held" Nothing (kvSession kv2)
-
 
 
 testGetKey :: TestTree
@@ -365,8 +384,43 @@ testIsValidSequencer = testCase "testIsValidSequencer" $ do
       result2 <- isValidSequencer client sequencer Nothing
       assertEqual "testIsValidSequencer: Invalid session was valid" False result2
 
---testAclCreatePolicy :: TestTree
---testAclCreatePolicy = testCase "testAclCreatePolicy" $ do
+testAclCreatePolicy :: TestTree
+testAclCreatePolicy = testCase "testAclCreatePolicy" $ do
+  client@ConsulClient{..} <- initializeConsulClient "localhost" consulPort Nothing
+  let policy = "{key_prefix \"\" {policy = \"read\"}}"
+      --policy = AclPolicyPut
+      --           { "somePolicyId"
+      --           , "somePolicyName"
+      --           , "a test policy to test consul-haskell with"
+      --           , ""
+      --           , [dc]
+      --           , Nothing
+      --           }
+  result <- createAclPolicy client (Just policy) Nothing
+  assertEqual "testAclCreatePolicy: placeholder awesome" False True
+
+  -- define new tests here
+
+--testAclGetPolicy :: TestTree
+--testAclGetPolicy = testCase "testAclGetPolicy" $ do
+--  client@ConsulClient{..} <- newClient
+--  -- define new tests here
+--
+--
+--testAclUpdatePolicy :: TestTree
+--testAclUpdatePolicy = testCase "testAclUpdatePolicy" $ do
+--  client@ConsulClient{..} <- newClient
+--  -- define new tests here
+--
+--
+--testAclDeletePolicy :: TestTree
+--testAclDeletePolicy = testCase "testAclDeletePolicy" $ do
+--  client@ConsulClient{..} <- newClient
+--  -- define new tests here
+--
+--
+--testAclListAllPolicy :: TestTree
+--testAclListAllPolicy = testCase "testAclListAllPolicy" $ do
 --  client@ConsulClient{..} <- newClient
 --  -- define new tests here
 
