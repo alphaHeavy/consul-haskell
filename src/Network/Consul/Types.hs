@@ -55,7 +55,7 @@ data AclPolicy = AclPolicy {
 
 data AclPolicyPut = AclPolicyPut {
   aclPolicyName :: Text,
-  aclPolicyDescription :: Maybe Text
+  aclPolicyDescription :: Maybe Text,
   aclPolicyRules :: Maybe Text,
   aclPolicyDatacenters :: Maybe [Text],
   aclPolicyNamespace :: Maybe Text
