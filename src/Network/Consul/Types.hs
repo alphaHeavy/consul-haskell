@@ -45,7 +45,7 @@ data ConsulClient = ConsulClient{
   ccHostname :: Text,
   ccPort :: PortNumber,
   ccWithTls :: Bool
-} deriving (Eq, Ord, Show)
+}
 
 data Datacenter = Datacenter Text deriving (Eq, Ord, Show)
 
@@ -169,7 +169,7 @@ data RegisterService = RegisterService {
 
 data Self = Self {
   sMember :: Member
-} deriving (Eq, Ord, Show)
+} deriving (Eq, Show)
 
 data Config = Config {
   cBootstrap :: Bool,
@@ -191,7 +191,7 @@ data Member = Member {
   mDelegateMin :: Int,
   mDelegateMax :: Int,
   mDelegateCur :: Int
-} deriving (Eq, Ord, Show)
+} deriving (Eq, Show)
 
 {- Health -}
 data Health = Health {
