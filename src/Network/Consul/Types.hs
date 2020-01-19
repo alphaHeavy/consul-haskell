@@ -238,31 +238,67 @@ instance FromJSON Datacenter where
   parseJSON _ = mzero
 
 instance FromJSON Check where
-  parseJSON (Object x) = Check <$> x .: "Node" <*> x .: "CheckID" <*> x .: "Name" <*> x .:? "Notes" <*> x .:? "ServiceID" <*> x .: "Status" <*> x .: "Output" <*> x .:? "ServiceName"
+  parseJSON (Object x) =
+    Check
+      <$> x .: "Node"
+      <*> x .: "CheckID"
+      <*> x .: "Name"
+      <*> x .:? "Notes"
+      <*> x .:? "ServiceID"
+      <*> x .: "Status"
+      <*> x .: "Output"
+      <*> x .:? "ServiceName"
   parseJSON _ = mzero
 
 instance FromJSON Service where
-  parseJSON (Object x) = Service <$> x .: "ID" <*> x .: "Service" <*> x .: "Tags" <*> x .:? "Address" <*> x .:? "Port"
+  parseJSON (Object x) =
+    Service
+      <$> x .: "ID"
+      <*> x .: "Service"
+      <*> x .: "Tags"
+      <*> x .:? "Address"
+      <*> x .:? "Port"
   parseJSON _ = mzero
 
 instance FromJSON Node where
-  parseJSON (Object x) = Node <$> x .: "Node" <*> x .: "Address"
+  parseJSON (Object x) =
+    Node
+      <$> x .: "Node"
+      <*> x .: "Address"
   parseJSON _ = mzero
 
 instance FromJSON Health where
-  parseJSON (Object x) = Health <$> x.: "Node" <*> x .: "Service" <*> x .: "Checks"
+  parseJSON (Object x) =
+    Health
+      <$> x.: "Node"
+      <*> x .: "Service"
+      <*> x .: "Checks"
   parseJSON _ = mzero
 
 instance FromJSON Session where
-  parseJSON (Object x) = Session <$> x .: "ID" <*> pure Nothing
+  parseJSON (Object x) =
+    Session
+      <$> x .: "ID"
+      <*> pure Nothing
   parseJSON _ = mzero
 
 instance FromJSON SessionInfoList where
-  parseJSON (Array x) = SessionInfoList <$> traverse parseJSON (toList x)
+  parseJSON (Array x) =
+    SessionInfoList
+      <$> traverse parseJSON (toList x)
   parseJSON _ = mzero
 
 instance FromJSON SessionInfo where
-  parseJSON (Object x) = SessionInfo <$> x .:? "LockDelay" <*> x .: "Checks" <*> x .: "Node" <*> x .: "ID" <*> x .:? "Behavior" <*> x .: "CreateIndex" <*> x .:? "Name" <*> x .:? "TTL"
+  parseJSON (Object x) =
+    SessionInfo
+      <$> x .:? "LockDelay"
+      <*> x .: "Checks"
+      <*> x .: "Node"
+      <*> x .: "ID"
+      <*> x .:? "Behavior"
+      <*> x .: "CreateIndex"
+      <*> x .:? "Name"
+      <*> x .:? "TTL"
   parseJSON _ = mzero
 
 instance FromJSON SessionBehavior where
