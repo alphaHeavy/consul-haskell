@@ -83,7 +83,7 @@ createRequest hostWithScheme portNumber endpoint query body wait dc = do
     indef req = if wait == True then req{responseTimeout = responseTimeoutNone} else req
 
 {- ACL Policies -}
-createPolicy :: MonadIO m => Manager -> Text -> PortNumber -> AclPolicyPut -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m Bool
+createPolicy :: MonadIO m => Manager -> Text -> PortNumber -> AclPolicyPut -> Maybe Datacenter -> m Bool
 createPolicy manager hostname portNumber policy dc = do
   initReq <- createRequest hostname portNumber "/v1/acl/policy/" Nothing policy False dc
   liftIO $ withResponse initReq manager $ \ response -> do
@@ -96,9 +96,9 @@ createPolicy manager hostname portNumber policy dc = do
       _ -> return False
 
 
-deletePolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m Bool
+deletePolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m Bool
 deletePolicy manager hostname portnumber policyId dc = do
-  initReq <- createRequest hostname portNumber (T.concat ["/v1/acl/policy",policyId]) Nothing Nothing False dc
+  initReq <- createRequest hostname portnumber (T.concat ["/v1/acl/policy",policyId]) Nothing Nothing False dc
   let httpReq = initReq { method = "DELETE"}
   liftIO $ withResponse httpReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
@@ -110,7 +110,7 @@ deletePolicy manager hostname portnumber policyId dc = do
       _ -> return False
 
 
-getPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe Network.Consul.Types.AclPolicy)
+getPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m (Maybe Network.Consul.Types.AclPolicy)
 getPolicy manager hostname portnumber policyId dc = do
   request <- createRequest hostname portnumber (T.concat ["/v1/acl/policy/",policyId]) Nothing Nothing False dc
   liftIO $ withResponse request manager $ \ response -> do
@@ -127,7 +127,7 @@ getPolicy manager hostname portnumber policyId dc = do
 --listPolicies
 
 
-putPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> AclPolicyPut -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m Bool
+putPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> AclPolicyPut -> Maybe Datacenter -> m Bool
 putPolicy manager hostname portNumber policyId policy dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/acl/policy/", policyId]) Nothing policy False dc
   liftIO $ withResponse initReq manager $ \ response -> do

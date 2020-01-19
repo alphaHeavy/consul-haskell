@@ -42,33 +42,27 @@ import Data.Word
 import Network.HTTP.Client (Manager)
 import Network.Socket
 
+-- ACL Policy w/ ID (Response from API)
+-- Can be used with the List of All Polocies API as Rules is a Maybe Text
 data AclPolicy = AclPolicy {
   aclPolicyId :: Text,
   aclPolicyName :: Text,
   aclPolicyDescription :: Text,
-  aclPolicyRules :: Text,
-  aclPolicyDatacenters :: [Text],
+  aclPolicyRules :: Maybe Text,
+  aclPolicyDatacenters :: Maybe [Text],
   aclPolicyHash :: Text,
   aclPolicyCreateIndex :: Word64,
   aclPolicyModifyIndex :: Word64
 } deriving (Eq, Ord, Show)
 
+-- ACL Policy Data type for Creating and Updating a Policy
 data AclPolicyPut = AclPolicyPut {
-  aclPolicyName :: Text,
-  aclPolicyDescription :: Maybe Text,
-  aclPolicyRules :: Maybe Text,
-  aclPolicyDatacenters :: Maybe [Text],
-  aclPolicyNamespace :: Maybe Text
+  aclPolicyPutName :: Text,
+  aclPolicyPutDescription :: Maybe Text,
+  aclPolicyPutRules :: Maybe Text,
+  aclPolicyPutDatacenters :: Maybe [Text],
+  aclPolicyPutNamespace :: Maybe Text
 } deriving (Eq, Ord, Show)
-
---data AclPolicyUpdate = AclPolicyUpdate {
---  aclPolicyId :: Text,
---  aclPolicyName :: Text,
---  aclPolicyDescription :: Maybe Text
---  aclPolicyRules :: Maybe Text,
---  aclPolicyDatacenters :: Maybe [Text],
---  aclPolicyNamespace :: Maybe Text
---} deriving (Eq, Ord, Show)
 
 data ConsulClient = ConsulClient{
   ccManager :: Manager,
