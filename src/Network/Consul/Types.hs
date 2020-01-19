@@ -45,17 +45,17 @@ data ConsulClient = ConsulClient{
   ccHostname :: Text,
   ccPort :: PortNumber,
   ccWithTls :: Bool
-}
+} deriving (Eq, Ord, Show)
 
-data Datacenter = Datacenter Text deriving (Eq,Show,Ord)
+data Datacenter = Datacenter Text deriving (Eq, Ord, Show)
 
-data Consistency = Consistent | Default | Stale deriving (Eq,Show,Enum,Ord)
+data Consistency = Consistent | Default | Stale deriving (Bounded, Enum, Eq, Ord, Show)
 
-data HealthCheckStatus = Critical | Passing | Unknown | Warning deriving (Eq,Show,Enum,Ord)
+data HealthCheckStatus = Critical | Passing | Unknown | Warning deriving (Bounded, Enum, Eq, Ord, Show)
 
-data SessionBehavior = Release | Delete deriving (Eq,Show,Enum,Ord)
+data SessionBehavior = Release | Delete deriving (Bounded, Enum, Eq, Ord, Show)
 
-data HealthCheck = Script Text Text | Ttl Text | Http Text deriving (Eq,Show,Ord)
+data HealthCheck = Script Text Text | Ttl Text | Http Text deriving (Eq, Ord, Show)
 
 data KeyValue = KeyValue {
   kvCreateIndex :: Word64,
@@ -65,19 +65,19 @@ data KeyValue = KeyValue {
   kvFlags :: Word64,
   kvSession :: Maybe Text,
   kvKey :: Text
-} deriving (Show,Eq)
+} deriving (Eq, Ord, Show)
 
 data KeyValuePut = KeyValuePut {
   kvpKey :: Text,
   kvpValue :: ByteString,
   kvpCasIndex :: Maybe Word64,
   kvpFlags :: Maybe Word64
-}
+} deriving (Eq, Ord, Show)
 
 data Session = Session {
   sId :: Text,
   sCreateIndex :: Maybe Word64
-} deriving (Show)
+} deriving (Eq, Ord, Show)
 
 data SessionInfo = SessionInfo {
   siLockDelay :: Maybe Word64,
@@ -88,7 +88,7 @@ data SessionInfo = SessionInfo {
   siCreateIndex :: Word64,
   siName :: Maybe Text,
   siTtl :: Maybe Text
-} deriving (Eq,Show)
+} deriving (Eq, Ord, Show)
 
 newtype SessionInfoList = SessionInfoList [SessionInfo]
 
@@ -99,13 +99,13 @@ data SessionRequest = SessionRequest {
   srChecks :: [Text],
   srBehavor :: Maybe SessionBehavior,
   srTtl :: Maybe Text
-}
+} deriving (Eq, Ord, Show)
 
 data Sequencer = Sequencer{
   sKey :: Text,
   sLockIndex :: Word64,
   sSession :: Session
-}
+} deriving (Eq, Ord, Show)
 
 data RegisterRequest = RegisterRequest {
   rrDatacenter :: Maybe Datacenter,
@@ -113,7 +113,7 @@ data RegisterRequest = RegisterRequest {
   rrAddress :: Text,
   rrService :: Maybe Service,
   rrCheck :: Maybe Check
-}
+} deriving (Eq, Ord, Show)
 
 data Service = Service {
   seId :: Text,
@@ -121,7 +121,7 @@ data Service = Service {
   seTags :: [Text],
   seAddress :: Maybe Text,
   sePort :: Maybe Int
-} deriving (Show)
+} deriving (Eq, Ord, Show)
 
 data ServiceResult = ServiceResult{
   srrNode :: Text,
@@ -131,7 +131,7 @@ data ServiceResult = ServiceResult{
   srrServiceTags :: [Text],
   srrServiceAddress :: Maybe Text,
   srrServicePort :: Maybe Int
-} deriving (Show)
+} deriving (Eq, Ord, Show)
 
 data Check = Check {
   cNode :: Text,
@@ -142,12 +142,12 @@ data Check = Check {
   cStatus :: HealthCheckStatus,
   cOutput :: Text,
   cServiceName :: Maybe Text
-} deriving (Show)
+} deriving (Eq, Ord, Show)
 
 data Node = Node {
   nNode :: Text,
   nAddress :: Text
-} deriving (Show)
+} deriving (Eq, Ord, Show)
 
 {- Agent -}
 data RegisterHealthCheck = RegisterHealthCheck {
@@ -157,7 +157,7 @@ data RegisterHealthCheck = RegisterHealthCheck {
   rhcScript :: Maybe Text,
   rhcInterval :: Maybe Text,
   rhcTtl :: Maybe Text
-}
+} deriving (Eq, Ord, Show)
 
 data RegisterService = RegisterService {
   rsId :: Maybe Text,
@@ -165,21 +165,21 @@ data RegisterService = RegisterService {
   rsTags :: [Text],
   rsPort :: Maybe Int16,
   rsCheck :: Maybe HealthCheck
-}
+} deriving (Eq, Ord, Show)
 
-data Self = Self{
+data Self = Self {
   sMember :: Member
-} deriving (Show)
+} deriving (Eq, Ord, Show)
 
-data Config = Config{
+data Config = Config {
   cBootstrap :: Bool,
   cServer :: Bool,
   cDatacenter :: Datacenter,
   cDataDir :: Text,
   cClientAddr :: Text
-}
+} deriving (Eq, Ord, Show)
 
-data Member = Member{
+data Member = Member {
   mName :: Text,
   mAddress :: Text,
   mPort :: Int ,
@@ -191,14 +191,14 @@ data Member = Member{
   mDelegateMin :: Int,
   mDelegateMax :: Int,
   mDelegateCur :: Int
-} deriving (Show)
+} deriving (Eq, Ord, Show)
 
 {- Health -}
 data Health = Health {
   hNode :: Node,
   hService :: Service,
   hChecks :: [Check]
-} deriving (Show)
+} deriving (Eq, Ord, Show)
 
 
 {- JSON Instances -}
