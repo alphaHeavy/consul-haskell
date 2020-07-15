@@ -3,8 +3,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Network.Consul (
-    createSession
+module Network.Consul
+  ( createAclPolicy
+  , createSession
   , deleteKey
   , destroySession
   , deregisterService
@@ -37,6 +38,7 @@ import Control.Monad (forever)
 import Control.Monad.IO.Class
 import Control.Monad.Catch (MonadMask)
 import Control.Retry
+import qualified Data.ByteString as B
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -68,6 +70,10 @@ initializeTlsConsulClient hostname port man = do
                         Just x -> return x
                         Nothing -> newTlsManagerWith tlsManagerSettings
     return $ ConsulClient manager hostname port True
+
+{- ACL -}
+createAclPolicy :: MonadIO m => ConsulClient -> Maybe B.ByteString -> Maybe Datacenter -> m Bool
+createAclPolicy _client@ConsulClient{..} = I.createPolicy ccManager (I.hostWithScheme _client) ccPort
 
 {- Key Value -}
 getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
