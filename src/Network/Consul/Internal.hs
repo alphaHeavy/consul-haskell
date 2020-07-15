@@ -3,8 +3,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Consul.Internal (
+  --ACL Policies
+    createPolicy
+  , deletePolicy
+  , getPolicy
+  --, listPolicies
+  --, updatePolicy
+
   --Client
-    hostWithScheme
+  , hostWithScheme
 
   --Key-Value Store
   , deleteKey
@@ -56,7 +63,7 @@ import Data.Word
 import Network.Consul.Types
 import Network.HTTP.Client
 import Network.HTTP.Types
-import Network.Socket (PortNumber(..))
+import Network.Socket (PortNumber)
 
 hostWithScheme :: ConsulClient -> Text
 hostWithScheme ConsulClient{..} = scheme `T.append` ccHostname
@@ -66,7 +73,7 @@ createRequest :: MonadIO m => Text -> PortNumber -> Text -> Maybe Text -> Maybe 
 createRequest hostWithScheme portNumber endpoint query body wait dc = do
   let baseUrl = T.concat [hostWithScheme,":",T.pack $ show portNumber,endpoint,needQueryString
                          ,maybe "" id query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
-  initReq <- liftIO $ parseUrl $ T.unpack baseUrl
+  initReq <- liftIO $ parseUrlThrow $ T.unpack baseUrl
   case body of
       Just x -> return $ indef $ initReq{ method = "PUT", requestBody = RequestBodyBS x, checkResponse = \ _ _ -> return ()}
       Nothing -> return $ indef $ initReq{checkResponse = \ _ _ -> return ()}
@@ -74,6 +81,64 @@ createRequest hostWithScheme portNumber endpoint query body wait dc = do
     needQueryString = if isJust dc || isJust query then "?" else ""
     prefixAnd = if isJust query && isJust dc then "&" else ""
     indef req = if wait == True then req{responseTimeout = responseTimeoutNone} else req
+
+{- ACL Policies -}
+createPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Maybe B.ByteString -> Maybe Datacenter -> m Bool
+createPolicy manager hostname portNumber policy dc = do
+  initReq <- createRequest hostname portNumber "/v1/acl/policy/" Nothing policy False dc
+  liftIO $ withResponse initReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+
+
+deletePolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m Bool
+deletePolicy manager hostname portnumber policyId dc = do
+  initReq <- createRequest hostname portnumber (T.concat ["/v1/acl/policy",policyId]) Nothing Nothing False dc
+  let httpReq = initReq { method = "DELETE"}
+  liftIO $ withResponse httpReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+
+
+getPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Datacenter -> m (Maybe Network.Consul.Types.AclPolicy)
+getPolicy manager hostname portnumber policyId dc = do
+  request <- createRequest hostname portnumber (T.concat ["/v1/acl/policy/",policyId]) Nothing Nothing False dc
+  liftIO $ withResponse request manager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ listToMaybe =<< (decode $ BL.fromStrict body)
+      _ -> return Nothing
+
+
+-- TODO: IMPLEMENT
+--listPolicies
+--listPolicies
+
+
+putPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe B.ByteString -> Maybe Datacenter -> m Bool
+putPolicy manager hostname portNumber policyId policy dc = do
+  initReq <- createRequest hostname portNumber (T.concat ["/v1/acl/policy/", policyId]) Nothing policy False dc
+  liftIO $ withResponse initReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+
 
 {- Key Value Store -}
 getKey :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe Network.Consul.Types.KeyValue)
@@ -147,7 +212,6 @@ putKey manager hostname portNumber request dc = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
-
 putKeyAcquireLock :: MonadIO m => Manager -> Text -> PortNumber -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
 putKeyAcquireLock manager hostname portNumber request (Session session _) dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/kv/", kvpKey request]) fquery (Just $ kvpValue request) False dc
@@ -205,7 +269,7 @@ getHealthChecks  manager hostname portNumber dc = do
 
 registerHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> RegisterHealthCheck -> m ()
 registerHealthCheck manager hostname portNumber request = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/register"]
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/register"]
   let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ BL.toStrict $ encode request}
   liftIO $ withResponse httpReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
@@ -213,7 +277,7 @@ registerHealthCheck manager hostname portNumber request = do
 
 deregisterHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
 deregisterHealthCheck manager hostname portNumber checkId = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/deregister/", checkId]
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/deregister/", checkId]
   liftIO $ withResponse initReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
     return ()
@@ -237,14 +301,14 @@ passHealthCheck manager hostname portNumber checkId dc = do
 
 warnHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
 warnHealthCheck manager hostname portNumber checkId = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/warn/", checkId]
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/warn/", checkId]
   liftIO $ withResponse initReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
     return ()
 
 failHealthCheck :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
 failHealthCheck manager hostname portNumber checkId = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/fail/", checkId]
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/check/fail/", checkId]
   liftIO $ withResponse initReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
     return ()
@@ -259,14 +323,14 @@ registerService manager hostname portNumber request dc = do
 
 deregisterService :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m ()
 deregisterService manager hostname portNumber service = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/service/deregister/", service]
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/service/deregister/", service]
   liftIO $ withResponse initReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
     return ()
 
 getSelf :: MonadIO m => Manager -> Text -> PortNumber -> m (Maybe Self)
 getSelf manager hostname portNumber = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/self"]
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/self"]
   liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
@@ -276,7 +340,7 @@ getSelf manager hostname portNumber = do
 {- Health -}
 getServiceChecks :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m [Check]
 getServiceChecks manager hostname portNumber name = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/health/checks/", name]
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/health/checks/", name]
   liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
@@ -284,7 +348,7 @@ getServiceChecks manager hostname portNumber name = do
 
 getServiceHealth :: MonadIO m => Manager -> Text -> PortNumber -> Text -> m (Maybe [Health])
 getServiceHealth manager hostname portNumber name = do
-  initReq <- liftIO $ parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/health/service/", name]
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/health/service/", name]
   liftIO $ withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
@@ -329,7 +393,7 @@ getSessionInfo manager hostname portNumber (Session session _) dc = do
 {- Catalog -}
 getDatacenters :: MonadIO m => Manager -> Text -> PortNumber -> m [Datacenter]
 getDatacenters manager hostname portNumber = liftIO $ do
-  initReq <- parseUrl $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/catalog/datacenters/"]
+  initReq <- parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/catalog/datacenters/"]
   withResponse initReq manager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
