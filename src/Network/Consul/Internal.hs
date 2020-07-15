@@ -7,8 +7,8 @@ module Network.Consul.Internal (
     createPolicy
   , deletePolicy
   , getPolicy
-  , listPolicies
-  , updatePolicy
+  --, listPolicies
+  --, updatePolicy
 
   --Client
   , hostWithScheme
@@ -63,7 +63,7 @@ import Data.Word
 import Network.Consul.Types
 import Network.HTTP.Client
 import Network.HTTP.Types
-import Network.Socket (PortNumber(..))
+import Network.Socket (PortNumber)
 
 hostWithScheme :: ConsulClient -> Text
 hostWithScheme ConsulClient{..} = scheme `T.append` ccHostname
@@ -83,7 +83,7 @@ createRequest hostWithScheme portNumber endpoint query body wait dc = do
     indef req = if wait == True then req{responseTimeout = responseTimeoutNone} else req
 
 {- ACL Policies -}
-createPolicy :: MonadIO m => Manager -> Text -> PortNumber -> AclPolicyPut -> Maybe Datacenter -> m Bool
+createPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Maybe B.ByteString -> Maybe Datacenter -> m Bool
 createPolicy manager hostname portNumber policy dc = do
   initReq <- createRequest hostname portNumber "/v1/acl/policy/" Nothing policy False dc
   liftIO $ withResponse initReq manager $ \ response -> do
@@ -127,7 +127,7 @@ getPolicy manager hostname portnumber policyId dc = do
 --listPolicies
 
 
-putPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> AclPolicyPut -> Maybe Datacenter -> m Bool
+putPolicy :: MonadIO m => Manager -> Text -> PortNumber -> Text -> Maybe B.ByteString -> Maybe Datacenter -> m Bool
 putPolicy manager hostname portNumber policyId policy dc = do
   initReq <- createRequest hostname portNumber (T.concat ["/v1/acl/policy/", policyId]) Nothing policy False dc
   liftIO $ withResponse initReq manager $ \ response -> do
