@@ -8,10 +8,12 @@ module Network.Consul (
   , deleteKey
   , destroySession
   , deregisterService
+  , getDatacenters
   , getKey
   , getKeys
   , getSelf
   , getService
+  , getServiceChecks
   , getServices
   , getServiceHealth
   , getSessionInfo
@@ -29,6 +31,11 @@ module Network.Consul (
   , runService
   , withSession
   , withSequencer
+  --Agent
+  , deregisterHealthCheck
+  , failHealthCheck
+  , registerHealthCheck
+  , warnHealthCheck
   , module Network.Consul.Types
 ) where
 
@@ -37,18 +44,26 @@ import Control.Monad (forever)
 import Control.Monad.IO.Class
 import Control.Monad.Catch (MonadMask)
 import Control.Retry
+import Data.Aeson (Value(..), decode,encode)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.HashMap.Strict as H
+import Data.Maybe (catMaybes, isJust, listToMaybe)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR
 import Data.Word
+import qualified Data.Vector as V
 import qualified Network.Consul.Internal as I
 import Network.Consul.Types
-import Network.HTTP.Client (Manager)
+import Network.HTTP.Client -- (method, Manager, responseBody)
 import Network.HTTP.Client.TLS (newTlsManager, newTlsManagerWith, tlsManagerSettings)
+import Network.HTTP.Types
 import Network.Socket (PortNumber)
 import UnliftIO (MonadUnliftIO, async, cancel, finally, wait, waitAnyCancel, withAsync)
 
+import Network.Consul.Internal
 
 import Prelude hiding (mapM)
 
@@ -62,6 +77,7 @@ initializeConsulClient hostname port man = do
                         Nothing -> newTlsManager
   return $ ConsulClient manager hostname port False
 
+
 initializeTlsConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
 initializeTlsConsulClient hostname port man = do
     manager <- liftIO $ case man of
@@ -69,51 +85,266 @@ initializeTlsConsulClient hostname port man = do
                         Nothing -> newTlsManagerWith tlsManagerSettings
     return $ ConsulClient manager hostname port True
 
+
 {- Key Value -}
 getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
-getKey _client@ConsulClient{..} = I.getKey ccManager (I.hostWithScheme _client) ccPort
+getKey _client@ConsulClient{..} key index consistency dc = do
+  let hostnameWithScheme = hostWithScheme _client
+  request <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/",key])
+                           fquery
+                           Nothing
+                           (isJust index)
+                           dc
+  liftIO $ withResponse request ccManager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ listToMaybe =<< (decode $ BL.fromStrict body)
+      _ -> return Nothing
+  where
+    cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
+    ind = fmap (\ x -> T.concat["index=", T.pack $ show x]) index
+    query = T.intercalate "&" $ catMaybes [cons,ind]
+    fquery = if query /= T.empty then Just query else Nothing
+
 
 getKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [KeyValue]
-getKeys _client@ConsulClient{..} = I.getKeys ccManager (I.hostWithScheme _client) ccPort
+getKeys _client@ConsulClient{..} key index consistency dc = do
+  let hostnameWithScheme = hostWithScheme _client
+  request <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/",key])
+                           fquery
+                           Nothing
+                           (isJust index)
+                           dc
+  liftIO $ withResponse request ccManager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ maybe [] id $ decode $ BL.fromStrict body
+      _ -> return []
+  where
+    cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
+    ind = fmap (\ x -> T.concat["index=", T.pack $ show x]) index
+    query = T.intercalate "&" $ catMaybes [cons,ind, Just "recurse"]
+    fquery = if query /= T.empty then Just query else Nothing
+
 
 listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [Text]
-listKeys _client@ConsulClient{..} = I.listKeys ccManager (I.hostWithScheme _client) ccPort
+listKeys _client@ConsulClient{..} prefix index consistency dc  = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", prefix])
+                           fquery
+                           Nothing
+                           (isJust index)
+                           dc
+  liftIO $ withResponse initReq ccManager $ \ response ->
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ maybe [] id $ decode $ BL.fromStrict body
+      _ -> return []
+  where
+    cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
+    ind = fmap (\ x -> T.concat["index=", T.pack $ show x]) index
+    query = T.intercalate "&" $ catMaybes [cons,ind, Just "keys"]
+    fquery = if query /= T.empty then Just query else Nothing
+
 
 putKey :: MonadIO m => ConsulClient -> KeyValuePut -> Maybe Datacenter -> m Bool
-putKey _client@ConsulClient{..} = I.putKey ccManager (I.hostWithScheme _client) ccPort
+putKey _client@ConsulClient{..} putRequest dc = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", kvpKey putRequest])
+                           fquery
+                           (Just $ kvpValue putRequest)
+                           False
+                           dc
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = I.decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags putRequest
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex putRequest
+    query = T.intercalate "&" $ catMaybes [flags,cas]
+    fquery = if query /= T.empty then Just query else Nothing
+
+
 
 putKeyAcquireLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
-putKeyAcquireLock _client@ConsulClient{..} = I.putKeyAcquireLock ccManager (I.hostWithScheme _client) ccPort
+putKeyAcquireLock _client@ConsulClient{..} request (Session session _) dc = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", kvpKey request])
+                           fquery
+                           (Just $ kvpValue request)
+                           False
+                           dc
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags request
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex request
+    acquire = T.concat["acquire=",session]
+    query = T.intercalate "&" $ catMaybes [flags,cas,Just acquire]
+    fquery = if query /= T.empty then Just query else Nothing
+
 
 putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
-putKeyReleaseLock _client@ConsulClient{..} = I.putKeyReleaseLock ccManager (I.hostWithScheme _client) ccPort
+putKeyReleaseLock _client@ConsulClient{..} request (Session session _) dc = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", kvpKey request])
+                           fquery
+                           (Just $ kvpValue request)
+                           False
+                           dc
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags request
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex request
+    release = T.concat["release=",session]
+    query = T.intercalate "&" $ catMaybes [flags,cas,Just release]
+    fquery = if query /= T.empty then Just query else Nothing
+
 
 deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m Bool
-deleteKey _client@ConsulClient{..} key = I.deleteKey ccManager (I.hostWithScheme _client) ccPort key
+deleteKey _client@ConsulClient{..} key recurse dc = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", key])
+                           (if recurse then Just "recurse" else Nothing)
+                           Nothing
+                           False
+                           dc
+  let httpReq = initReq { method = "DELETE"}
+  liftIO $ withResponse httpReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+
 
 {- Health Checks -}
-passHealthCheck :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m ()
-passHealthCheck _client@ConsulClient{..} = I.passHealthCheck ccManager (I.hostWithScheme _client) ccPort
+getServiceChecks :: MonadIO m => ConsulClient -> Text -> m [Check]
+getServiceChecks _client@ConsulClient{..} name = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/health/checks", name])
+                           Nothing
+                           Nothing
+                           False
+                           Nothing
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ maybe [] id (decode $ BL.fromStrict body)
+
 
 getServiceHealth :: MonadIO m => ConsulClient -> Text -> m (Maybe [Health])
-getServiceHealth _client@ConsulClient{..} = I.getServiceHealth ccManager (I.hostWithScheme _client) ccPort
+getServiceHealth _client@ConsulClient{..} name = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostnameWithScheme, ":", T.pack $ show ccPort ,"/v1/health/service/", name]
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ decode $ BL.fromStrict body
+
 
 {- Catalog -}
+getDatacenters :: MonadIO m => ConsulClient -> m [Datacenter]
+getDatacenters client@ConsulClient{..} = liftIO $ do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <- parseUrlThrow $ T.unpack $ T.concat [hostnameWithScheme, ":", T.pack $ show ccPort ,"/v1/catalog/datacenters/"]
+  withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let val = (decode $ BL.fromStrict body)
+    case val of
+      Just x -> return x
+      Nothing -> return []
+
+
 getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
-getService _client@ConsulClient{..} = I.getService ccManager (I.hostWithScheme _client) ccPort
+getService _client@ConsulClient{..} name tag dc= do
+  let hostnameWithScheme = hostWithScheme _client
+  req <- createRequest hostnameWithScheme
+                       ccPort
+                       (T.concat["/v1/catalog/service/",name])
+                       (fmap (\ x -> T.concat ["tag=",x]) tag)
+                       Nothing
+                       False
+                       dc
+
+  liftIO $ withResponse req ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    return $ decode $ BL.fromStrict $ B.concat bodyParts
+
 
 getServices :: MonadIO m => ConsulClient -> Maybe Text -> Maybe Datacenter -> m [Text]
-getServices _client@ConsulClient{..} = I.getServices ccManager (I.hostWithScheme _client) ccPort
+getServices _client@ConsulClient{..} tag dc = do
+    req <- createRequest (hostWithScheme _client)
+                         ccPort
+                         "/v1/catalog/services"
+                         Nothing
+                         Nothing
+                         False
+                         dc
+    liftIO $ withResponse req ccManager $ \ response -> do
+        bodyParts <- brConsume $ responseBody response
+        return $ parseServices tag $ decode $ BL.fromStrict $ B.concat bodyParts
+  where
+    parseServices t (Just (Object v)) = filterTags t $ H.toList v
+    parseServices _   _               = []
+    filterTags :: Maybe Text -> [(Text, Value)] -> [Text]
+    filterTags (Just t)               = map fst . filter (\ (_, (Array v)) -> (String t) `V.elem` v)
+    filterTags Nothing                = map fst
+
 
 {- Agent -}
 getSelf :: MonadIO m => ConsulClient -> m (Maybe Self)
-getSelf _client@ConsulClient{..} = I.getSelf ccManager (I.hostWithScheme _client) ccPort
+getSelf _client@ConsulClient{..} =  do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostnameWithScheme, ":", T.pack $ show ccPort ,"/v1/agent/self"]
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ decode $ BL.fromStrict body
 
-deregisterService :: MonadIO m => ConsulClient -> Text -> m ()
-deregisterService _client@ConsulClient{..} = I.deregisterService ccManager (I.hostWithScheme _client) ccPort
-
-registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
-registerService _client@ConsulClient{..} = I.registerService ccManager (I.hostWithScheme _client) ccPort
 
 runService :: MonadUnliftIO m => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
 runService client request action dc = do
@@ -141,19 +372,76 @@ runService client request action dc = do
       let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
       passHealthCheck client checkId dc
 
+
 {- Session -}
 createSession :: MonadIO m => ConsulClient -> SessionRequest -> Maybe Datacenter -> m (Maybe Session)
-createSession client@ConsulClient{..} = I.createSession ccManager (I.hostWithScheme client) ccPort
+createSession client@ConsulClient{..} request dc = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           "/v1/session/create"
+                           Nothing
+                           (Just $ BL.toStrict $ encode request)
+                           False
+                           dc
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        return $ decode $ BL.fromStrict $ B.concat bodyParts
+      _ -> return Nothing
+
 
 destroySession :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m ()
-destroySession client@ConsulClient{..} = I.destroySession ccManager (I.hostWithScheme client) ccPort
+destroySession client@ConsulClient{..} (Session session _) dc  = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/session/destroy/", session])
+                           Nothing
+                           Nothing
+                           False
+                           dc
+  let req = initReq{method = "PUT"}
+  liftIO $ withResponse req ccManager $ \ _response -> return ()
+
 
 renewSession :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m Bool
-renewSession client@ConsulClient{..} = I.renewSession ccManager (I.hostWithScheme client) ccPort
+renewSession client@ConsulClient{..} (Session session _) dc =  do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/session/renew/", session])
+                           Nothing
+                           Nothing
+                           False
+                           dc
+  let req = initReq{method = "PUT"}
+  liftIO $ withResponse req ccManager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> return True
+      _ -> return False
+
 
 getSessionInfo :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m (Maybe [SessionInfo])
-getSessionInfo client@ConsulClient{..} = I.getSessionInfo ccManager (I.hostWithScheme client) ccPort
+getSessionInfo client@ConsulClient{..} (Session session _) dc = do
+  let hostnameWithScheme = hostWithScheme client
+  req <- createRequest hostnameWithScheme
+                       ccPort
+                       (T.concat ["/v1/session/info/",session])
+                       Nothing
+                       Nothing
+                       False
+                       dc
+  liftIO $ withResponse req ccManager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        return $ decode $ BL.fromStrict $ B.concat bodyParts
+      _ -> return Nothing
 
+
+-- TODO: use `name` in function?
 withSession :: forall m a. (MonadMask m, MonadUnliftIO m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
 withSession client@ConsulClient{..} name delay session action lostAction = (do
   withAsync (action session) $ \ mainAsync -> withAsync extendSession $ \ extendAsync -> do
@@ -168,6 +456,7 @@ withSession client@ConsulClient{..} name delay session action lostAction = (do
         True -> extendSession
         False -> lostAction
 
+
 getSequencerForLock :: MonadIO m => ConsulClient -> Text -> Session -> Maybe Datacenter -> m (Maybe Sequencer)
 getSequencerForLock client key session datacenter = do
   kv <- getKey client key Nothing (Just Consistent) datacenter
@@ -177,12 +466,14 @@ getSequencerForLock client key session datacenter = do
       if isValid then return $ Just $ Sequencer key (kvLockIndex k) session else return Nothing
     Nothing -> return Nothing
 
+
 isValidSequencer :: MonadIO m => ConsulClient -> Sequencer -> Maybe Datacenter -> m Bool
 isValidSequencer client sequencer datacenter = do
   mkv <- getKey client (sKey sequencer) Nothing (Just Consistent) datacenter
   case mkv of
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
+
 
 withSequencer :: (MonadMask m, MonadUnliftIO m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
 withSequencer client sequencer action lostAction delay dc =
@@ -195,3 +486,108 @@ withSequencer client sequencer action lostAction delay dc =
       case valid of
         True -> pulseLock
         False -> lostAction
+
+
+{- Agent -}
+{-getHealthChecks :: MonadIO m => Manager -> Text -> PortNumber -> Maybe Datacenter -> m [Check]
+getHealthChecks  manager hostname portNumber dc = do
+  request <- createRequest hostname portNumber "/agent/checks" Nothing Nothing False dc
+ -}
+
+registerHealthCheck :: MonadIO m => ConsulClient -> RegisterHealthCheck -> m ()
+registerHealthCheck client@ConsulClient{..} request = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostnameWithScheme, ":", T.pack $ show ccPort ,"/v1/agent/check/register"]
+  let httpReq = initReq { method = "PUT", requestBody = RequestBodyBS $ BL.toStrict $ encode request}
+  liftIO $ withResponse httpReq ccManager $ \ response -> do
+    _bodyParts <- brConsume $ responseBody response
+    return ()
+
+deregisterHealthCheck :: MonadIO m => ConsulClient -> Maybe Datacenter -> Text -> m ()
+deregisterHealthCheck client@ConsulClient{..} dc checkId = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/agent/check/deregister/", checkId])
+                           Nothing
+                           Nothing
+                           False
+                           dc
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    _bodyParts <- brConsume $ responseBody response
+    return ()
+
+
+passHealthCheck :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m ()
+passHealthCheck client checkId dc = do
+  -- Using `Just ""` as the `body` to ensure a PUT request is used.
+  -- Consul < 1.0 accepted a GET here (which was a legacy mistake).
+  -- In 1.0, they switched it to require a PUT.
+  -- See also:
+  --   * https://github.com/hashicorp/consul/issues/3659
+  --   * https://github.com/cablehead/python-consul/pull/182
+  --   * https://github.com/hashicorp/consul/blob/51ea240df8476e02215d53fbfad5838bf0d44d21/CHANGELOG.md
+  --     Section "HTTP Verbs are Enforced in Many HTTP APIs":
+  --     > Many endpoints in the HTTP API that previously took any HTTP verb
+  --     > now check for specific HTTP verbs and enforce them.
+  let portNumber = ccPort client
+      manager = ccManager client
+      hostname = hostWithScheme client
+      --hostname = checkId
+  initReq <- createRequest hostname
+                           portNumber
+                           (T.concat ["/v1/agent/check/pass/", checkId])
+                           Nothing
+                           (Just "")
+                           False
+                           dc
+  liftIO $ withResponse initReq manager $ \ _response -> do
+    return ()
+
+
+warnHealthCheck :: MonadIO m => ConsulClient -> Text -> m ()
+warnHealthCheck client@ConsulClient{..} checkId = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostnameWithScheme, ":", T.pack $ show ccPort ,"/v1/agent/check/warn/", checkId]
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    _bodyParts <- brConsume $ responseBody response
+    return ()
+
+
+failHealthCheck :: MonadIO m => ConsulClient -> Text -> m ()
+failHealthCheck client@ConsulClient{..} checkId = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostnameWithScheme, ":", T.pack $ show ccPort ,"/v1/agent/check/fail/", checkId]
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    _bodyParts <- brConsume $ responseBody response
+    return ()
+
+
+
+registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
+registerService client request dc = do
+  let portNumber = ccPort client
+      manager = ccManager client
+      hostname = hostWithScheme client
+  initReq <- createRequest hostname
+                           portNumber
+                           "/v1/agent/service/register"
+                           Nothing
+                           (Just $ BL.toStrict $ encode request)
+                           False
+                           dc
+  liftIO $ withResponse initReq manager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> return True
+      _ -> return False
+
+
+deregisterService :: MonadIO m => ConsulClient -> Text -> m ()
+deregisterService client service = do
+  let portNumber = ccPort client
+      manager = ccManager client
+      hostname = hostWithScheme client
+  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/service/deregister/", service]
+  liftIO $ withResponse initReq manager $ \ response -> do
+    _bodyParts <- brConsume $ responseBody response
+    return ()
