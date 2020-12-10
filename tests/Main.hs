@@ -87,9 +87,12 @@ localNode = Node localhost localNodeAddr
 consulPort :: PortNumber
 consulPort = 18500
 
+dc1 :: Datacenter
+dc1 = Datacenter "dc1"
+
 -- Initialize a new `ConsulClient`.
 newClient :: IO ConsulClient
-newClient = initializeConsulClient localhost consulPort emptyHttpManager
+newClient = initializeConsulClient localhost consulPort dc1 emptyHttpManager
 
 {- Internal Tests -}
 internalKVTests :: TestTree
@@ -111,14 +114,14 @@ internalKVTests =
 testGetInvalidKey :: TestTree
 testGetInvalidKey = testCase "testGetInvalidKey" $ do
   client@ConsulClient{..} <- newClient
-  x <- getKey client "nokey" Nothing Nothing Nothing
+  x <- getKey client "nokey" Nothing Nothing
   assertEqual "testGetInvalidKey: Found a key that doesn't exist" x Nothing
 
 testPutKey :: TestTree
 testPutKey = testCase "testPutKey" $ do
   client@ConsulClient{..} <- newClient
   let put = KeyValuePut "/testPutKey" "Test" Nothing Nothing
-  x <- putKey client put Nothing
+  x <- putKey client put
   assertEqual "testPutKey: Write failed" True x
 
 testPutKeyAcquireLock :: TestTree
@@ -133,14 +136,14 @@ testPutKeyAcquireLock = testCase "testPutKeyAcquireLock" $ do
           checkIds
           (Just Release)
           (Just ttl)
-  result <- createSession client req Nothing
+  result <- createSession client req
   case result of
     Nothing -> assertFailure "testPutKeyAcquireLock: No session was created"
     Just session -> do
       let put = KeyValuePut "/testPutKeyAcquireLock" "Test" Nothing Nothing
-      x <- putKeyAcquireLock client put session Nothing
+      x <- putKeyAcquireLock client put session
       assertEqual "testPutKeyAcquireLock: Write failed" True x
-      Just kv <- getKey client "/testPutKeyAcquireLock" Nothing Nothing Nothing
+      Just kv <- getKey client "/testPutKeyAcquireLock" Nothing Nothing
       let Just returnedSession = kvSession kv
       assertEqual "testPutKeyAcquireLock: Session was not found on key" returnedSession (sId session)
 
@@ -156,20 +159,20 @@ testPutKeyReleaseLock = testCase "testPutKeyReleaseLock" $ do
           checkIds
           (Just Release)
           (Just ttl)
-  result <- createSession client req Nothing
+  result <- createSession client req
   case result of
     Nothing -> assertFailure "testPutKeyReleaseLock: No session was created"
     Just session -> do
       let put = KeyValuePut "/testPutKeyReleaseLock" "Test" Nothing Nothing
-      x <- putKeyAcquireLock client put session Nothing
+      x <- putKeyAcquireLock client put session
       assertEqual "testPutKeyReleaseLock: Write failed" True x
-      Just kv <- getKey client "/testPutKeyReleaseLock" Nothing Nothing Nothing
+      Just kv <- getKey client "/testPutKeyReleaseLock" Nothing Nothing
       let Just returnedSession = kvSession kv
       assertEqual "testPutKeyReleaseLock: Session was not found on key" returnedSession (sId session)
       let put2 = KeyValuePut "/testPutKeyReleaseLock" "Test" Nothing Nothing
-      x2 <- putKeyReleaseLock client put2 session Nothing
+      x2 <- putKeyReleaseLock client put2 session
       assertEqual "testPutKeyReleaseLock: Release failed" True x2
-      Just kv2 <- getKey client "/testPutKeyReleaseLock" Nothing Nothing Nothing
+      Just kv2 <- getKey client "/testPutKeyReleaseLock" Nothing Nothing
       assertEqual "testPutKeyAcquireLock: Session still held" Nothing (kvSession kv2)
 
 
@@ -177,9 +180,9 @@ testGetKey :: TestTree
 testGetKey = testCase "testGetKey" $ do
   client@ConsulClient{..} <- newClient
   let put = KeyValuePut "/testGetKey" "Test" Nothing Nothing
-  x1 <- putKey client put Nothing
+  x1 <- putKey client put
   assertEqual "testGetKey: Write failed" True x1
-  x2 <- getKey client "/testGetKey" Nothing Nothing Nothing
+  x2 <- getKey client "/testGetKey" Nothing Nothing
   case x2 of
     Just x -> assertEqual "testGetKey: Incorrect Value" (kvValue x) (Just "Test")
     Nothing -> assertFailure "testGetKey: No value returned"
@@ -188,10 +191,10 @@ testGetNullValueKey :: TestTree
 testGetNullValueKey = testCase "testGetNullValueKey" $ do
   client@ConsulClient{..} <- newClient
   let put = KeyValuePut "/testGetNullValueKey" "" Nothing Nothing
-  x1 <- putKey client put Nothing
+  x1 <- putKey client put
   assertEqual "testGetNullValueKey: Write failed" True x1
   liftIO $ sleep 0.5
-  x2 <- getKey client "/testGetNullValueKey" Nothing Nothing Nothing
+  x2 <- getKey client "/testGetNullValueKey" Nothing Nothing
   case x2 of
     Just x -> assertEqual "testGetNullValueKey: Incorrect Value" (kvValue x) Nothing
     Nothing -> assertFailure "testGetNullValueKey: No value returned"
@@ -200,35 +203,35 @@ testGetKeys :: TestTree
 testGetKeys = testCase "testGetKeys" $ do
   client@ConsulClient{..} <- newClient
   let put1 = KeyValuePut "/testGetKeys/key1" "Test" Nothing Nothing
-  x1 <- putKey client put1 Nothing
+  x1 <- putKey client put1
   assertEqual "testGetKeys: Write failed" True x1
   let put2 = KeyValuePut "/testGetKeys/key2" "Test" Nothing Nothing
-  x2 <- putKey client put2 Nothing
+  x2 <- putKey client put2
   assertEqual "testGetKeys: Write failed" True x2
-  x3 <- getKeys client "/testGetKeys" Nothing Nothing Nothing
+  x3 <- getKeys client "/testGetKeys" Nothing Nothing
   assertEqual "testGetKeys: Incorrect number of results" 2 (length x3)
 
 testListKeys :: TestTree
 testListKeys = testCase "testListKeys" $ do
   client@ConsulClient{..} <- newClient
   let put1 = KeyValuePut "/testListKeys/key1" "Test" Nothing Nothing
-  x1 <- putKey client put1 Nothing
+  x1 <- putKey client put1
   assertEqual "testListKeys: Write failed" True x1
   let put2 = KeyValuePut "/testListKeys/key2" "Test" Nothing Nothing
-  x2 <- putKey client put2 Nothing
+  x2 <- putKey client put2
   assertEqual "testListKeys: Write failed" True x2
-  x3 <- listKeys client "/testListKeys/" Nothing Nothing Nothing
+  x3 <- listKeys client "/testListKeys/" Nothing Nothing
   assertEqual "testListKeys: Incorrect number of results" 2 (length x3)
 
 testDeleteKey :: TestTree
 testDeleteKey = testCase "testDeleteKey" $ do
   client@ConsulClient{..} <- newClient
   let put1 = KeyValuePut "/testDeleteKey" "Test" Nothing Nothing
-  x1 <- putKey client put1 Nothing
+  x1 <- putKey client put1
   assertEqual "testDeleteKey: Write failed" True x1
-  x2 <- deleteKey client "/testDeleteKey" False Nothing
+  x2 <- deleteKey client "/testDeleteKey" False
   assertEqual "testDeleteKey: Delete Failed" True x2
-  x3 <- getKey client "/testDeleteKey" Nothing Nothing Nothing
+  x3 <- getKey client "/testDeleteKey" Nothing Nothing
   assertEqual "testDeleteKey: Key was not deleted" Nothing x3
 
 testDeleteRecursive :: TestTree
@@ -236,12 +239,12 @@ testDeleteRecursive = testCase "testDeleteRecursive" $ do
   client@ConsulClient{..} <- newClient
   let put1 = KeyValuePut "/testDeleteRecursive/1" "Test" Nothing Nothing
       put2 = KeyValuePut "/testDeleteRecursive/2" "Test" Nothing Nothing
-  x1 <- putKey client put1 Nothing
+  x1 <- putKey client put1
   assertEqual "testDeleteKey: Write failed" True x1
-  x2 <- putKey client put2 Nothing
+  x2 <- putKey client put2
   assertEqual "testDeleteKey: Write failed" True x2
-  deleteKey client "/testDeleteRecursive/" True Nothing
-  x3 <- getKey client "/testDeleteRecursive/1" Nothing Nothing Nothing
+  deleteKey client "/testDeleteRecursive/" True
+  x3 <- getKey client "/testDeleteRecursive/1" Nothing Nothing
   assertEqual "testDeleteKey: Key was not deleted" Nothing x3
 
 {- Client KV -}
@@ -253,12 +256,12 @@ testDeleteRecursiveClient = testCase "testDeleteRecursiveClient" $ do
   client <- newClient
   let put1 = KeyValuePut "/testDeleteRecursive/1" "Test" Nothing Nothing
       put2 = KeyValuePut "/testDeleteRecursive/2" "Test" Nothing Nothing
-  x1 <- putKey client put1 Nothing
+  x1 <- putKey client put1
   assertEqual "testDeleteKey: Write failed" True x1
-  x2 <- putKey client put2 Nothing
+  x2 <- putKey client put2
   assertEqual "testDeleteKey: Write failed" True x2
-  deleteKey client "/testDeleteRecursive/" True Nothing
-  x3 <- getKey client "/testDeleteRecursive/1" Nothing Nothing Nothing
+  deleteKey client "/testDeleteRecursive/" True
+  x3 <- getKey client "/testDeleteRecursive/1" Nothing Nothing
   assertEqual "testDeleteKey: Key was not deleted" Nothing x3
 
 {- Agent -}
@@ -266,9 +269,9 @@ testRegisterService :: TestTree
 testRegisterService = testCase "testRegisterService" $ do
   client@ConsulClient{..} <- newClient
   let req = RegisterService Nothing "testService" ["test"] Nothing (Just $ Ttl "10s")
-  val <- registerService client req Nothing
+  val <- registerService client req
   assertEqual "testRegisterService: Service was not created" val True
-  mService <- getService client "testService" Nothing Nothing
+  mService <- getService client "testService" Nothing
   let serviceWasNotFound = assertFailure "testRegisterService: Service was not found"
   case mService of
     Just [] -> serviceWasNotFound
@@ -282,7 +285,7 @@ testDeregisterService = testCase "testDeregisterService" $ do
   val <- registerService client req Nothing
   assertEqual "testDeregisterService: Service was not created" val True
   deregisterService client (rsName req) Nothing
-  mService <- getService client (rsName req) Nothing Nothing
+  mService <- getService client (rsName req) Nothing
   case mService of
     Just [] -> return ()
     Nothing -> return ()
@@ -307,7 +310,7 @@ testGetServiceHealth :: TestTree
 testGetServiceHealth = testCase "testGetServiceHealth" $ do
   client@ConsulClient{..} <- newClient
   let req = RegisterService (Just "testGetServiceHealth") "testGetServiceHealth" [] Nothing Nothing
-  r1 <- registerService client req Nothing
+  r1 <- registerService client req
   case r1 of
     True -> do
       liftIO $ sleep 1
@@ -337,7 +340,7 @@ testCreateSession = testCase "testCreateSession" $ do
           (Just ttl)
   let loopUntilSession :: IO ()
       loopUntilSession = do
-        resp <- createSession client req Nothing
+        resp <- createSession client req
         case resp of
           Just _ -> return ()
           Nothing -> do
@@ -362,11 +365,11 @@ testGetSessionInfo = testCase "testGetSessionInfo" $ do
           checkIds
           (Just Release)
           (Just ttl)
-  result <- createSession client req Nothing
+  result <- createSession client req
   case result of
     Just x -> do
       sleep 1
-      x1 <- getSessionInfo client x Nothing
+      x1 <- getSessionInfo client x
       case x1 of
         Just _ -> return ()
         Nothing -> assertFailure "testGetSessionInfo: Session Info was not returned"
@@ -377,10 +380,10 @@ testRenewSession = testCase "testRenewSession" $ do
   client@ConsulClient{..} <- newClient
   let ttl = "30s"
       req = SessionRequest Nothing (Just "testRenewSession") localNode checkIds (Just Release) (Just ttl)
-  result <- createSession client req Nothing
+  result <- createSession client req
   case result of
     Just x -> do
-      x1 <- renewSession client x Nothing
+      x1 <- renewSession client x
       case x1 of
         True -> return ()
         False -> assertFailure "testRenewSession: Session was not renewed"
@@ -391,7 +394,7 @@ testRenewNonexistentSession = testCase "testRenewNonexistentSession" $ do
   client@ConsulClient{..} <- newClient
   sessId :: UUID <- randomIO
   let session = Session (toText sessId) Nothing
-  x <- renewSession client session Nothing
+  x <- renewSession client session
   case x of
     True -> assertFailure "testRenewNonexistentSession: Non-existent session was renewed"
     False -> return ()
@@ -401,11 +404,11 @@ testDestroySession = testCase "testDestroySession" $ do
   client@ConsulClient{..} <- newClient
   let ttl = "30s"
       req = SessionRequest Nothing (Just "testDestroySession") localNode checkIds (Just Release) (Just ttl)
-  result <- createSession client req Nothing
+  result <- createSession client req
   case result of
     Just x -> do
-      _ <- destroySession client x Nothing
-      x1 <- getSessionInfo client x Nothing
+      _ <- destroySession client x
+      x1 <- getSessionInfo client x
       assertBool "testDestroySession: Session info was returned after destruction" $ (x1 == Nothing) || (x1 == Just [])
     Nothing -> assertFailure "testDestroySession: No session was created"
 
@@ -416,11 +419,11 @@ testSessionMaintained :: TestTree
 testSessionMaintained = testCase "testSessionMaintained" $ do
   client@ConsulClient{..} <- newClient
   let req = SessionRequest Nothing (Just "testSessionMaintained") localNode checkIds (Just Release) (Just "15s")
-  result <- createSession client req Nothing
+  result <- createSession client req
   case result of
     Just session -> do
       sleep 12
-      y <- getSessionInfo client session Nothing
+      y <- getSessionInfo client session
       assertEqual "testSessionMaintained: Session not found" True (isJust y)
     Nothing -> assertFailure "testSessionMaintained: No Session was created"
 
@@ -429,18 +432,18 @@ testWithSessionCancel :: TestTree
 testWithSessionCancel = testCase "testWithSessionCancel" $ do
   client@ConsulClient{..} <- newClient
   let req = SessionRequest Nothing (Just "testWithSessionCancel") localNode checkIds (Just Release) (Just "10s")
-  result <- createSession client req Nothing
+  result <- createSession client req
   case result of
     Just session -> do
       x1 <- withSession client Nothing 5 session (\ y -> action y client ) cancelAction
       assertEqual "testWithSessionCancel: Incorrect value" "Canceled" x1
-      z <- getSessionInfo client session Nothing
+      z <- getSessionInfo client session
       assertBool "testWithSessionCancel: Session was found" $ (z == Nothing) || (z == Just [])
     Nothing -> assertFailure "testWithSessionCancel: No session was created"
   where
     action :: MonadIO m => Session -> ConsulClient -> m Text
     action x client@ConsulClient{..} = do
-      destroySession client x Nothing
+      destroySession client x
       liftIO $ sleep 30
       return ("NotCanceled" :: Text)
 
@@ -452,7 +455,7 @@ testRunServiceTtl :: TestTree
 testRunServiceTtl = testCase "testRunServiceTtl" $ do
   client@ConsulClient{..} <- newClient
   let register = RegisterService Nothing "testRunServiceTtl" [] (Just 8000) $ Just $ Ttl "10s"
-  runService client register (action client) Nothing
+  runService client register (action client)
   where
     action client = do
       sleep 15
@@ -471,22 +474,23 @@ testSequencerLostSession = testCase "testSequencerLostSession" $ do
   client@ConsulClient{..} <- initializeConsulClient "localhost" consulPort Nothing
 -}
 
+-- TODO: drop stringified values (localhost, dc1, etc)
 testIsValidSequencer :: TestTree
 testIsValidSequencer = testCase "testIsValidSequencer" $ do
-  client@ConsulClient{..} <- initializeConsulClient localhost consulPort Nothing
+  client@ConsulClient{..} <- initializeConsulClient localhost consulPort dc1 Nothing
   let req = SessionRequest Nothing (Just "testIsValidSequencer") localNode checkIds (Just Release) (Just "10s")
-  result <- createSession client req Nothing
+  result <- createSession client req
   case result of
     Nothing -> assertFailure "testIsValidSequencer: No session was created"
     Just session -> do
       let put = KeyValuePut "/testIsValidSequencer" "Test" Nothing Nothing
-      x <- putKeyAcquireLock client put session Nothing
+      x <- putKeyAcquireLock client put session
       assertEqual "testIsValidSequencer: Write failed" True x
-      Just sequencer <- getSequencerForLock client "/testIsValidSequencer" session Nothing
-      result1 <- isValidSequencer client sequencer Nothing
+      Just sequencer <- getSequencerForLock client "/testIsValidSequencer" session
+      result1 <- isValidSequencer client sequencer
       assertEqual "testIsValidSequencer: Valid sequencer was invalid" True result1
-      _ <- destroySession client session Nothing
-      result2 <- isValidSequencer client sequencer Nothing
+      _ <- destroySession client session
+      result2 <- isValidSequencer client sequencer
       assertEqual "testIsValidSequencer: Invalid session was valid" False result2
 
 

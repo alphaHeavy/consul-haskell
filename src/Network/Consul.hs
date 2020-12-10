@@ -70,25 +70,25 @@ import Prelude hiding (mapM)
 parseTtl :: Integral t => Text -> t
 parseTtl ttl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
 
-initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
-initializeConsulClient hostname port man = do
+initializeConsulClient :: MonadIO m => Text -> PortNumber -> Datacenter -> Maybe Manager -> m ConsulClient
+initializeConsulClient hostname port dc man = do
   manager <- liftIO $ case man of
                         Just x -> return x
                         Nothing -> newTlsManager
-  return $ ConsulClient manager hostname port False
+  return $ ConsulClient manager hostname port False dc
 
 
-initializeTlsConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
-initializeTlsConsulClient hostname port man = do
+initializeTlsConsulClient :: MonadIO m => Text -> PortNumber -> Datacenter -> Maybe Manager -> m ConsulClient
+initializeTlsConsulClient hostname port dc man = do
     manager <- liftIO $ case man of
                         Just x -> return x
                         Nothing -> newTlsManagerWith tlsManagerSettings
-    return $ ConsulClient manager hostname port True
+    return $ ConsulClient manager hostname port True dc
 
 
 {- Key Value -}
-getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m (Maybe KeyValue)
-getKey _client@ConsulClient{..} key index consistency dc = do
+getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m (Maybe KeyValue)
+getKey _client@ConsulClient{..} key index consistency = do
   let hostnameWithScheme = hostWithScheme _client
   request <- createRequest hostnameWithScheme
                            ccPort
@@ -96,7 +96,7 @@ getKey _client@ConsulClient{..} key index consistency dc = do
                            fquery
                            Nothing
                            (isJust index)
-                           dc
+                           (Just ccDatacenter)
   liftIO $ withResponse request ccManager $ \ response -> do
     case responseStatus response of
       x | x == status200 -> do
@@ -111,8 +111,8 @@ getKey _client@ConsulClient{..} key index consistency dc = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
-getKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [KeyValue]
-getKeys _client@ConsulClient{..} key index consistency dc = do
+getKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m [KeyValue]
+getKeys _client@ConsulClient{..} key index consistency = do
   let hostnameWithScheme = hostWithScheme _client
   request <- createRequest hostnameWithScheme
                            ccPort
@@ -120,7 +120,7 @@ getKeys _client@ConsulClient{..} key index consistency dc = do
                            fquery
                            Nothing
                            (isJust index)
-                           dc
+                           (Just ccDatacenter)
   liftIO $ withResponse request ccManager $ \ response -> do
     case responseStatus response of
       x | x == status200 -> do
@@ -135,8 +135,8 @@ getKeys _client@ConsulClient{..} key index consistency dc = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
-listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> Maybe Datacenter -> m [Text]
-listKeys _client@ConsulClient{..} prefix index consistency dc  = do
+listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m [Text]
+listKeys _client@ConsulClient{..} prefix index consistency = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -144,7 +144,7 @@ listKeys _client@ConsulClient{..} prefix index consistency dc  = do
                            fquery
                            Nothing
                            (isJust index)
-                           dc
+                           (Just ccDatacenter)
   liftIO $ withResponse initReq ccManager $ \ response ->
     case responseStatus response of
       x | x == status200 -> do
@@ -159,8 +159,8 @@ listKeys _client@ConsulClient{..} prefix index consistency dc  = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
-putKey :: MonadIO m => ConsulClient -> KeyValuePut -> Maybe Datacenter -> m Bool
-putKey _client@ConsulClient{..} putRequest dc = do
+putKey :: MonadIO m => ConsulClient -> KeyValuePut -> m Bool
+putKey _client@ConsulClient{..} putRequest = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -168,7 +168,7 @@ putKey _client@ConsulClient{..} putRequest dc = do
                            fquery
                            (Just $ kvpValue putRequest)
                            False
-                           dc
+                           (Just ccDatacenter)
   liftIO $ withResponse initReq ccManager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
@@ -185,8 +185,8 @@ putKey _client@ConsulClient{..} putRequest dc = do
 
 
 
-putKeyAcquireLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
-putKeyAcquireLock _client@ConsulClient{..} request (Session session _) dc = do
+putKeyAcquireLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> m Bool
+putKeyAcquireLock _client@ConsulClient{..} request (Session session _) = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -194,7 +194,7 @@ putKeyAcquireLock _client@ConsulClient{..} request (Session session _) dc = do
                            fquery
                            (Just $ kvpValue request)
                            False
-                           dc
+                           (Just ccDatacenter)
   liftIO $ withResponse initReq ccManager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
@@ -211,8 +211,8 @@ putKeyAcquireLock _client@ConsulClient{..} request (Session session _) dc = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
-putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> Maybe Datacenter -> m Bool
-putKeyReleaseLock _client@ConsulClient{..} request (Session session _) dc = do
+putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> m Bool
+putKeyReleaseLock _client@ConsulClient{..} request (Session session _) = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -220,7 +220,7 @@ putKeyReleaseLock _client@ConsulClient{..} request (Session session _) dc = do
                            fquery
                            (Just $ kvpValue request)
                            False
-                           dc
+                           (Just ccDatacenter)
   liftIO $ withResponse initReq ccManager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
@@ -237,8 +237,8 @@ putKeyReleaseLock _client@ConsulClient{..} request (Session session _) dc = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
-deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> Maybe Datacenter -> m Bool
-deleteKey _client@ConsulClient{..} key recurse dc = do
+deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> m Bool
+deleteKey _client@ConsulClient{..} key recurse = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -246,7 +246,7 @@ deleteKey _client@ConsulClient{..} key recurse dc = do
                            (if recurse then Just "recurse" else Nothing)
                            Nothing
                            False
-                           dc
+                           (Just ccDatacenter)
   let httpReq = initReq { method = "DELETE"}
   liftIO $ withResponse httpReq ccManager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
@@ -299,8 +299,8 @@ getDatacenters client@ConsulClient{..} = liftIO $ do
       Nothing -> return []
 
 
-getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> Maybe Datacenter -> m (Maybe [ServiceResult])
-getService _client@ConsulClient{..} name tag dc= do
+getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> m (Maybe [ServiceResult])
+getService _client@ConsulClient{..} name tag = do
   let hostnameWithScheme = hostWithScheme _client
   req <- createRequest hostnameWithScheme
                        ccPort
@@ -308,22 +308,22 @@ getService _client@ConsulClient{..} name tag dc= do
                        (fmap (\ x -> T.concat ["tag=",x]) tag)
                        Nothing
                        False
-                       dc
+                       (Just ccDatacenter)
 
   liftIO $ withResponse req ccManager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     return $ decode $ BL.fromStrict $ B.concat bodyParts
 
 
-getServices :: MonadIO m => ConsulClient -> Maybe Text -> Maybe Datacenter -> m [Text]
-getServices _client@ConsulClient{..} tag dc = do
+getServices :: MonadIO m => ConsulClient -> Maybe Text -> m [Text]
+getServices _client@ConsulClient{..} tag = do
     req <- createRequest (hostWithScheme _client)
                          ccPort
                          "/v1/catalog/services"
                          Nothing
                          Nothing
                          False
-                         dc
+                         (Just ccDatacenter)
     liftIO $ withResponse req ccManager $ \ response -> do
         bodyParts <- brConsume $ responseBody response
         return $ parseServices tag $ decode $ BL.fromStrict $ B.concat bodyParts
@@ -346,9 +346,9 @@ getSelf _client@ConsulClient{..} =  do
     return $ decode $ BL.fromStrict body
 
 
-runService :: MonadUnliftIO m => ConsulClient -> RegisterService -> m () -> Maybe Datacenter -> m ()
-runService client request action dc = do
-  r <- registerService client request dc
+runService :: MonadUnliftIO m => ConsulClient -> RegisterService -> m () -> m ()
+runService client request action = do
+  r <- registerService client request
   case r of
     True -> do
       mainFunc <- async action
@@ -370,12 +370,12 @@ runService client request action dc = do
       let ttl = parseTtl x
       liftIO $ threadDelay $ (ttl - (fromIntegral $ floor (fromIntegral ttl / fromIntegral 2))) * 1000000
       let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
-      passHealthCheck client checkId dc
+      passHealthCheck client checkId
 
 
 {- Session -}
-createSession :: MonadIO m => ConsulClient -> SessionRequest -> Maybe Datacenter -> m (Maybe Session)
-createSession client@ConsulClient{..} request dc = do
+createSession :: MonadIO m => ConsulClient -> SessionRequest -> m (Maybe Session)
+createSession client@ConsulClient{..} request = do
   let hostnameWithScheme = hostWithScheme client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -383,7 +383,7 @@ createSession client@ConsulClient{..} request dc = do
                            noQuery
                            (Just $ BL.toStrict $ encode request)
                            waitFalse
-                           dc
+                           (Just ccDatacenter)
   liftIO $ withResponse initReq ccManager $ \ response -> do
     case responseStatus response of
       x | x == status200 -> do
@@ -392,8 +392,8 @@ createSession client@ConsulClient{..} request dc = do
       _ -> return Nothing
 
 
-destroySession :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m ()
-destroySession client@ConsulClient{..} (Session session _) dc  = do
+destroySession :: MonadIO m => ConsulClient -> Session ->  m ()
+destroySession client@ConsulClient{..} (Session session _) = do
   let hostnameWithScheme = hostWithScheme client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -401,13 +401,13 @@ destroySession client@ConsulClient{..} (Session session _) dc  = do
                            Nothing
                            Nothing
                            False
-                           dc
+                           (Just ccDatacenter)
   let req = initReq{method = "PUT"}
   liftIO $ withResponse req ccManager $ \ _response -> return ()
 
 
-renewSession :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m Bool
-renewSession client@ConsulClient{..} (Session session _) dc =  do
+renewSession :: MonadIO m => ConsulClient -> Session ->  m Bool
+renewSession client@ConsulClient{..} (Session session _) =  do
   let hostnameWithScheme = hostWithScheme client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -415,7 +415,7 @@ renewSession client@ConsulClient{..} (Session session _) dc =  do
                            Nothing
                            Nothing
                            False
-                           dc
+                           (Just ccDatacenter)
   let req = initReq{method = "PUT"}
   liftIO $ withResponse req ccManager $ \ response -> do
     case responseStatus response of
@@ -423,8 +423,8 @@ renewSession client@ConsulClient{..} (Session session _) dc =  do
       _ -> return False
 
 
-getSessionInfo :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m (Maybe [SessionInfo])
-getSessionInfo client@ConsulClient{..} (Session sessionId _) dc = do
+getSessionInfo :: MonadIO m => ConsulClient -> Session ->  m (Maybe [SessionInfo])
+getSessionInfo client@ConsulClient{..} (Session sessionId _) = do
   let hostnameWithScheme = hostWithScheme client
   req <- createRequest hostnameWithScheme
                        ccPort
@@ -432,7 +432,7 @@ getSessionInfo client@ConsulClient{..} (Session sessionId _) dc = do
                        noQuery
                        noRequestBody
                        waitFalse
-                       dc
+                       (Just ccDatacenter)
   liftIO $ withResponse req ccManager $ \ response -> do
     case responseStatus response of
       x | x == status200 -> do
@@ -446,20 +446,21 @@ withSession :: forall m a. (MonadMask m, MonadUnliftIO m) => ConsulClient -> May
 withSession client@ConsulClient{..} name delay session action lostAction = (do
   withAsync (action session) $ \ mainAsync -> withAsync extendSession $ \ extendAsync -> do
     result :: a <- return . snd =<< waitAnyCancel [mainAsync,extendAsync]
-    return result) `finally` (destroySession client session Nothing)
+    return result) `finally` (destroySession client session)
   where
     extendSession :: m a
     extendSession = do
       liftIO $ threadDelay $ (delay * 1000000)
-      x <- renewSession client session Nothing
+      x <- renewSession client session
       case x of
         True -> extendSession
         False -> lostAction
 
 
-getSequencerForLock :: MonadIO m => ConsulClient -> Text -> Session -> Maybe Datacenter -> m (Maybe Sequencer)
-getSequencerForLock client key session datacenter = do
-  kv <- getKey client key Nothing (Just Consistent) datacenter
+getSequencerForLock :: MonadIO m => ConsulClient -> Text -> Session -> m (Maybe Sequencer)
+getSequencerForLock client key session = do
+  let dc = ccDatacenter client
+  kv <- getKey client key Nothing (Just Consistent)
   case kv of
     Just k -> do
       let isValid = maybe False ((sId session) ==) $ kvSession k
@@ -467,22 +468,22 @@ getSequencerForLock client key session datacenter = do
     Nothing -> return Nothing
 
 
-isValidSequencer :: MonadIO m => ConsulClient -> Sequencer -> Maybe Datacenter -> m Bool
-isValidSequencer client sequencer datacenter = do
-  mkv <- getKey client (sKey sequencer) Nothing (Just Consistent) datacenter
+isValidSequencer :: MonadIO m => ConsulClient -> Sequencer -> m Bool
+isValidSequencer client sequencer = do
+  mkv <- getKey client (sKey sequencer) Nothing (Just Consistent)
   case mkv of
     Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
 
 
-withSequencer :: (MonadMask m, MonadUnliftIO m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> Maybe Datacenter -> m a
-withSequencer client sequencer action lostAction delay dc =
+withSequencer :: (MonadMask m, MonadUnliftIO m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> m a
+withSequencer client sequencer action lostAction delay =
   withAsync action $ \ mainAsync -> withAsync pulseLock $ \ pulseAsync -> do
     waitAnyCancel [mainAsync, pulseAsync] >>= return . snd
   where
     pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
       liftIO $ threadDelay delay
-      valid <- isValidSequencer client sequencer dc
+      valid <- isValidSequencer client sequencer
       case valid of
         True -> pulseLock
         False -> lostAction
@@ -503,8 +504,8 @@ registerHealthCheck client@ConsulClient{..} request = do
     _bodyParts <- brConsume $ responseBody response
     return ()
 
-deregisterHealthCheck :: MonadIO m => ConsulClient -> Maybe Datacenter -> Text -> m ()
-deregisterHealthCheck client@ConsulClient{..} dc checkId = do
+deregisterHealthCheck :: MonadIO m => ConsulClient -> Text -> m ()
+deregisterHealthCheck client@ConsulClient{..} checkId = do
   let hostnameWithScheme = hostWithScheme client
   initReq <- createRequest hostnameWithScheme
                            ccPort
@@ -512,14 +513,14 @@ deregisterHealthCheck client@ConsulClient{..} dc checkId = do
                            Nothing
                            Nothing
                            False
-                           dc
+                           (Just ccDatacenter)
   liftIO $ withResponse initReq ccManager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
     return ()
 
 
-passHealthCheck :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m ()
-passHealthCheck client checkId dc = do
+passHealthCheck :: MonadIO m => ConsulClient -> Text -> m ()
+passHealthCheck client checkId = do
   -- Using `Just ""` as the `body` to ensure a PUT request is used.
   -- Consul < 1.0 accepted a GET here (which was a legacy mistake).
   -- In 1.0, they switched it to require a PUT.
@@ -533,6 +534,7 @@ passHealthCheck client checkId dc = do
   let portNumber = ccPort client
       manager = ccManager client
       hostname = hostWithScheme client
+      dc = ccDatacenter client
       --hostname = checkId
   initReq <- createRequest hostname
                            portNumber
@@ -540,7 +542,7 @@ passHealthCheck client checkId dc = do
                            Nothing
                            (Just "")
                            False
-                           dc
+                           (Just dc)
   liftIO $ withResponse initReq manager $ \ _response -> do
     return ()
 
@@ -564,18 +566,19 @@ failHealthCheck client@ConsulClient{..} checkId = do
 
 
 
-registerService :: MonadIO m => ConsulClient -> RegisterService -> Maybe Datacenter -> m Bool
-registerService client request dc = do
+registerService :: MonadIO m => ConsulClient -> RegisterService -> m Bool
+registerService client request = do
   let portNumber = ccPort client
       manager = ccManager client
       hostname = hostWithScheme client
+      dc = ccDatacenter client
   initReq <- createRequest hostname
                            portNumber
                            "/v1/agent/service/register"
                            Nothing
                            (Just $ BL.toStrict $ encode request)
                            False
-                           dc
+                           (Just dc)
   liftIO $ withResponse initReq manager $ \ response -> do
     case responseStatus response of
       x | x == status200 -> return True

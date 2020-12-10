@@ -49,12 +49,13 @@ import Data.Word
 import Network.HTTP.Client (Manager)
 import Network.Socket
 
-data ConsulClient = ConsulClient{
-  ccManager :: Manager,
-  ccHostname :: Text,
-  ccPort :: PortNumber,
-  ccWithTls :: Bool
-}
+data ConsulClient = ConsulClient
+  { ccManager :: Manager
+  , ccHostname :: Text
+  , ccPort :: PortNumber
+  , ccWithTls :: Bool
+  , ccDatacenter :: Datacenter
+  }
 
 data Datacenter = Datacenter Text deriving (Eq, Ord, Show)
 
