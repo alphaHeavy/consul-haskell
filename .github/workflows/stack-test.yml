@@ -24,5 +24,5 @@ jobs:
           apt install -y unzip
           wget -q 'https://releases.hashicorp.com/consul/1.9.0/consul_1.9.0_linux_amd64.zip'
           unzip "consul_1.9.0_linux_amd64.zip"
-          mv ./consul ~/.local/bin/
+          mv ./consul $(echo $PATH | cut -d ':' -f 1)/
           stack test
