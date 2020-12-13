@@ -25,7 +25,16 @@ module Network.Consul.Types (
   SessionBehavior(..),
   SessionInfo(..),
   SessionRequest(..),
-  Sequencer(..)
+  Sequencer(..),
+  ConsulHost,
+  ApiEndpoint,
+  ConsulQuery,
+  ConsulRequestBody,
+  WaitFlag,
+  noQuery,
+  noRequestBody,
+  waitTrue,
+  waitFalse
 ) where
 import Control.Monad
 import Data.Aeson
@@ -344,3 +353,14 @@ foo (Just (String x)) =
     Right y -> return $ Just y
 foo (Just _) = return Nothing
 foo Nothing = return Nothing
+-- TODO: where to put these?
+type ConsulHost = Text
+type ApiEndpoint = Text
+type ConsulQuery = Text
+type ConsulRequestBody = ByteString
+type WaitFlag = Bool
+
+waitTrue = True
+waitFalse = False
+noQuery = Nothing
+noRequestBody = Nothing
