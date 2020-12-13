@@ -23,12 +23,27 @@ import Network.HTTP.Client
 import Network.HTTP.Types
 import Network.Socket (PortNumber)
 
-hostWithScheme :: ConsulClient -> Text
+hostWithScheme :: ConsulClient -> ConsulHost
 hostWithScheme ConsulClient{..} = scheme `T.append` ccHostname
   where scheme = if ccWithTls then "https://" else "http://"
 
-createRequest :: MonadIO m => Text -> PortNumber -> Text -> Maybe Text -> Maybe ByteString -> Bool -> Maybe Datacenter -> m Request
-createRequest hostWithScheme portNumber endpoint query body wait dc = do
+
+-- TODO: document
+createRequest :: MonadIO m => ConsulHost
+                           -> PortNumber
+                           -> ApiEndpoint
+                           -> Maybe ConsulQuery
+                           -> Maybe ConsulRequestBody
+                           -> WaitFlag
+                           -> Maybe Datacenter
+                           -> m Request
+createRequest hostWithScheme
+              portNumber
+              endpoint
+              query
+              body
+              wait
+              dc = do
   let baseUrl = T.concat [hostWithScheme,":",T.pack $ show portNumber,endpoint,needQueryString
                          ,maybe "" id query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
   initReq <- liftIO $ parseUrlThrow $ T.unpack baseUrl
