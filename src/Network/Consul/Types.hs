@@ -107,7 +107,7 @@ newtype SessionInfoList = SessionInfoList [SessionInfo]
 data SessionRequest = SessionRequest {
   srLockDelay :: Maybe Text,
   srName :: Maybe Text,
-  srNode :: Maybe Node,
+  srNode :: Node,
   srChecks :: [Text],
   srBehavor :: Maybe SessionBehavior,
   srTtl :: Maybe Text
@@ -337,7 +337,7 @@ instance ToJSON HealthCheck where
   toJSON (Script x y) = object ["Script" .= x, "Interval" .= y]
 
 instance ToJSON SessionRequest where
-  toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (fmap nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
+  toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
 
 instance ToJSON ServiceResult where
   toJSON (ServiceResult node addr sid sName sTags sAddress sPort) = object["Node" .= node, "Address" .= addr, "ServiceID" .= sid, "ServiceName" .= sName, "ServiceTags" .= sTags, "ServiceAddress" .= sAddress, "ServicePort" .= sPort]
