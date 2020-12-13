@@ -1,0 +1,26 @@
+name: stack-test
+
+# Run this workflow every time a new commit pushed to your repository
+on: push
+
+jobs:
+  # Set the job key. The key is displayed as the job name
+  # when a job name is not provided
+  stack-test:
+    # Name the Job
+    name: 
+    # Set the type of machine to run on
+    runs-on: ubuntu-latest
+    container: fpco/stack-build-small
+    steps:
+      # Checks out a copy of your repository on the ubuntu machine
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Runs stack test
+      - name: Run Stack Test
+        run: |
+          wget 'https://releases.hashicorp.com/consul/1.9.0/consul_1.9.0_linux_amd64.zip'
+          unzip "consul_1.9.0_linux_amd64.zip"
+          mv ./consul ~/.local/bin/
+          stack test
