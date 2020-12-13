@@ -20,7 +20,8 @@ jobs:
       # Runs stack test
       - name: Run Stack Test
         run: |
-          wget 'https://releases.hashicorp.com/consul/1.9.0/consul_1.9.0_linux_amd64.zip'
+          apt install -y unzip
+          wget -q 'https://releases.hashicorp.com/consul/1.9.0/consul_1.9.0_linux_amd64.zip'
           unzip "consul_1.9.0_linux_amd64.zip"
           mv ./consul ~/.local/bin/
           stack test
