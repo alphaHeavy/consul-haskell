@@ -38,9 +38,8 @@ jobs:
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       run: |
-        wget -q 'https://releases.hashicorp.com/consul/${{ matrix.consul-version }}/consul_${{ matrix.consul-version }}_linux_amd64.zip'
-        unzip consul_${{ matrix.consul-version }}_linux_amd64.zip
-        sudo mkdir -p ~/.local/bin/ && sudo mv consul ~/.local/bin/consul-${{ matrix.consul-version }} && sudo chmod +x ~/.local/bin/consul-${{ matrix.consul-version }} && sudo ln -sf  ~/.local/bin/consul-${{ matrix.consul-version }}  ~/.local/bin/consul
+	sudo make install-consul VERSION=${{ matrix.consul-version }}
+	sudo make symlink-consul VERSION=${{ matrix.consul-version }}
 
     - name: Build
       env:
