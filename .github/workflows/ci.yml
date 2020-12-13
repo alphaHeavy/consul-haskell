@@ -11,6 +11,7 @@ jobs:
     name: stack ${{ matrix.stack }} / ghc ${{ matrix.ghc }} / consul ${{ matrix.consul-version }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false    # let other jobs run, even if one fails
       matrix:
         stack:
           - "2.3.1"
