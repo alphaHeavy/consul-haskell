@@ -15,16 +15,16 @@ import Data.Maybe
 #else
 import Data.Monoid ((<>))
 #endif
-import Data.Text (Text)
+import Data.Text (unpack, Text)
 import Data.UUID
 import Network.Consul (createSession, deleteKey, destroySession,getKey, getSequencerForLock,getSessionInfo,initializeConsulClient, isValidSequencer,putKey,putKeyAcquireLock,withSession,ConsulClient(..),runService,getServiceHealth)
 import Network.Consul.Types
 import Network.Consul
 import Network.Consul.Internal (hostWithScheme, emptyHttpManager)
 import Network.HTTP.Client
-import Network.Socket (PortNumber(..))
+import Network.Socket (PortNumber) --(..))
 import System.IO (hFlush)
-import System.Process.Typed (proc, stopProcess)
+import System.Process.Typed (proc) --, stopProcess)
 import qualified System.Process.Typed as PT
 import System.Random
 import System.Timeout (timeout)
@@ -37,11 +37,20 @@ import SocketUtils (isPortOpen, simpleSockAddr)
 sleep :: Double -> IO ()
 sleep seconds = threadDelay (ceiling (seconds * 1e6))
 
+localhost :: ConsulHost
+localhost = "localhost"
+
+localNodeAddr :: Text
+localNodeAddr = "127.0.0.1"
+
+localNode :: Node
+localNode = Node localhost localNodeAddr
+
 consulPort :: PortNumber
 consulPort = 18500
 
 newClient :: IO ConsulClient
-newClient = initializeConsulClient "localhost" consulPort emptyHttpManager
+newClient = initializeConsulClient localhost consulPort emptyHttpManager
 
 {- Internal Tests -}
 internalKVTests :: TestTree
@@ -64,7 +73,8 @@ testPutKey = testCase "testPutKey" $ do
 testPutKeyAcquireLock :: TestTree
 testPutKeyAcquireLock = testCase "testPutKeyAcquireLock" $ do
   client@ConsulClient{..} <- newClient
-  let req = SessionRequest Nothing (Just "testPutKeyAcquireLock") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  let ttl = "30s"
+      req = SessionRequest lockDelay (Just "testPutKeyAcquireLock") localNode checkIds (Just Release) (Just ttl)
   result <- createSession client req Nothing
   case result of
     Nothing -> assertFailure "testPutKeyAcquireLock: No session was created"
@@ -79,7 +89,8 @@ testPutKeyAcquireLock = testCase "testPutKeyAcquireLock" $ do
 testPutKeyReleaseLock :: TestTree
 testPutKeyReleaseLock = testCase "testPutKeyReleaseLock" $ do
   client@ConsulClient{..} <- newClient
-  let req = SessionRequest Nothing (Just "testPutKeyReleaseLock") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  let ttl = "30s"
+      req = SessionRequest Nothing (Just "testPutKeyReleaseLock") localNode checkIds (Just Release) (Just ttl)
   result <- createSession client req Nothing
   case result of
     Nothing -> assertFailure "testPutKeyReleaseLock: No session was created"
@@ -115,7 +126,7 @@ testGetNullValueKey = testCase "testGetNullValueKey" $ do
   let put = KeyValuePut "/testGetNullValueKey" "" Nothing Nothing
   x1 <- putKey client put Nothing
   assertEqual "testGetNullValueKey: Write failed" True x1
-  liftIO $ threadDelay (500 * 1000)
+  liftIO $ sleep 0.5
   x2 <- getKey client "/testGetNullValueKey" Nothing Nothing Nothing
   case x2 of
     Just x -> assertEqual "testGetNullValueKey: Incorrect Value" (kvValue x) Nothing
@@ -220,7 +231,7 @@ testGetServiceHealth = testCase "testGetServiceHealth" $ do
   r1 <- registerService client req Nothing
   case r1 of
     True -> do
-      liftIO $ threadDelay 1000000
+      liftIO $ sleep 1
       r2 <- getServiceHealth client "testGetServiceHealth"
       case r2 of
         Just [x] -> return ()
@@ -231,11 +242,29 @@ testGetServiceHealth = testCase "testGetServiceHealth" $ do
 testHealth :: TestTree
 testHealth = testGroup "Health Check Tests" [testGetServiceHealth]
 
+-- Name of existing health check we can rely on for tests that use the Session API
+serfHealth :: Text
+serfHealth = "serfHealth"
+
+-- list of names of service/node checks (which should exist in consul already)
+checkIds :: [Text]
+checkIds = [serfHealth]
+
+-- for requests to session API
+lockDelay :: Maybe a
+lockDelay = Nothing
+
 {- Session -}
 testCreateSession :: TestTree
 testCreateSession = testCase "testCreateSession" $ do
   client@ConsulClient{..} <- newClient
-  let req = SessionRequest Nothing (Just "testCreateSession") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  let ttl = "30s"
+      req = SessionRequest lockDelay
+                           (Just "testCreateSession")
+                           localNode
+                           checkIds
+                           (Just Release)
+                           (Just ttl)
   let loopUntilSession :: IO ()
       loopUntilSession = do
         resp <- createSession client req Nothing
@@ -253,14 +282,20 @@ testCreateSession = testCase "testCreateSession" $ do
 fiveSecondMicros :: Int
 fiveSecondMicros = 5 * 1000 * 1000
 
---
 testGetSessionInfo :: TestTree
 testGetSessionInfo = testCase "testGetSessionInfo" $ do
   client@ConsulClient{..} <- newClient
-  let req = SessionRequest Nothing (Just "testGetSessionInfo") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  let ttl = "30s"
+      req = SessionRequest lockDelay
+                           (Just "testGetSessionInfo")
+                           localNode
+                           checkIds
+                           (Just Release)
+                           (Just ttl)
   result <- createSession client req Nothing
   case result of
     Just x -> do
+      sleep 1
       x1 <- getSessionInfo client x Nothing
       case x1 of
         Just _ -> return ()
@@ -270,7 +305,8 @@ testGetSessionInfo = testCase "testGetSessionInfo" $ do
 testRenewSession :: TestTree
 testRenewSession = testCase "testRenewSession" $ do
   client@ConsulClient{..} <- newClient
-  let req = SessionRequest Nothing (Just "testRenewSession") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  let ttl = "30s"
+      req = SessionRequest Nothing (Just "testRenewSession") localNode checkIds (Just Release) (Just ttl)
   result <- createSession client req Nothing
   case result of
     Just x -> do
@@ -293,7 +329,8 @@ testRenewNonexistentSession = testCase "testRenewNonexistentSession" $ do
 testDestroySession :: TestTree
 testDestroySession = testCase "testDestroySession" $ do
   client@ConsulClient{..} <- newClient
-  let req = SessionRequest Nothing (Just "testDestroySession") Nothing ["serfHealth"] (Just Release) (Just "30s")
+  let ttl = "30s"
+      req = SessionRequest Nothing (Just "testDestroySession") localNode checkIds (Just Release) (Just ttl)
   result <- createSession client req Nothing
   case result of
     Just x -> do
@@ -305,15 +342,14 @@ testDestroySession = testCase "testDestroySession" $ do
 testInternalSession :: TestTree
 testInternalSession = testGroup "Internal Session Tests" [testCreateSession, testGetSessionInfo, testRenewSession, testRenewNonexistentSession, testDestroySession]
 
-
 testSessionMaintained :: TestTree
 testSessionMaintained = testCase "testSessionMaintained" $ do
   client@ConsulClient{..} <- newClient
-  let req = SessionRequest Nothing (Just "testSessionMaintained") Nothing ["serfHealth"] (Just Release) (Just "10s")
+  let req = SessionRequest Nothing (Just "testSessionMaintained") localNode checkIds (Just Release) (Just "15s")
   result <- createSession client req Nothing
   case result of
     Just session -> do
-      threadDelay (12 * 1000000)
+      sleep 12
       y <- getSessionInfo client session Nothing
       assertEqual "testSessionMaintained: Session not found" True (isJust y)
     Nothing -> assertFailure "testSessionMaintained: No Session was created"
@@ -322,7 +358,7 @@ testSessionMaintained = testCase "testSessionMaintained" $ do
 testWithSessionCancel :: TestTree
 testWithSessionCancel = testCase "testWithSessionCancel" $ do
   client@ConsulClient{..} <- newClient
-  let req = SessionRequest Nothing (Just "testWithSessionCancel") Nothing ["serfHealth"] (Just Release) (Just "10s")
+  let req = SessionRequest Nothing (Just "testWithSessionCancel") localNode checkIds (Just Release) (Just "10s")
   result <- createSession client req Nothing
   case result of
     Just session -> do
@@ -335,7 +371,7 @@ testWithSessionCancel = testCase "testWithSessionCancel" $ do
     action :: MonadIO m => Session -> ConsulClient -> m Text
     action x client@ConsulClient{..} = do
       destroySession client x Nothing
-      liftIO $ threadDelay (30 * 1000000)
+      liftIO $ sleep 30
       return ("NotCanceled" :: Text)
 
     cancelAction :: MonadIO m => m Text
@@ -349,7 +385,7 @@ testRunServiceTtl = testCase "testRunServiceTtl" $ do
   runService client register (action client) Nothing
   where
     action client = do
-      threadDelay 15000000
+      sleep 15
       mHealth <- getServiceHealth client "testRunServiceTtl"
       case mHealth of
         Nothing -> assertFailure "testRunServiceTtl: No healthcheck was found"
@@ -367,8 +403,8 @@ testSequencerLostSession = testCase "testSequencerLostSession" $ do
 
 testIsValidSequencer :: TestTree
 testIsValidSequencer = testCase "testIsValidSequencer" $ do
-  client@ConsulClient{..} <- initializeConsulClient "localhost" consulPort Nothing
-  let req = SessionRequest Nothing (Just "testIsValidSequencer") Nothing ["serfHealth"] (Just Release) (Just "10s")
+  client@ConsulClient{..} <- initializeConsulClient localhost consulPort Nothing
+  let req = SessionRequest Nothing (Just "testIsValidSequencer") localNode checkIds (Just Release) (Just "10s")
   result <- createSession client req Nothing
   case result of
     Nothing -> assertFailure "testIsValidSequencer: No session was created"
@@ -428,10 +464,15 @@ main = do
           proc
             "consul"
             [ "agent", "-dev"
+            , "-node", (unpack localhost) -- hardcode node name as "localhost"
             , "-log-level", "err"
+          --, "-log-level", "debug"        -- for debugging
             , "-http-port", show (fromIntegral consulPort :: Int)
             , "-config-file", configFilePath
             ]
     withProcessTerm consulProc $ \_p -> do
       waitForConsulOrFail
+      -- to let the consul agent register itself (the node the agent is running on)
+      -- TODO: should we instead query consul to lookup the node registration?
+      sleep 3
       defaultMain allTests

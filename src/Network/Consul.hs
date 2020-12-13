@@ -380,9 +380,9 @@ createSession client@ConsulClient{..} request dc = do
   initReq <- createRequest hostnameWithScheme
                            ccPort
                            "/v1/session/create"
-                           Nothing
+                           noQuery
                            (Just $ BL.toStrict $ encode request)
-                           False
+                           waitFalse
                            dc
   liftIO $ withResponse initReq ccManager $ \ response -> do
     case responseStatus response of
@@ -424,14 +424,14 @@ renewSession client@ConsulClient{..} (Session session _) dc =  do
 
 
 getSessionInfo :: MonadIO m => ConsulClient -> Session -> Maybe Datacenter ->  m (Maybe [SessionInfo])
-getSessionInfo client@ConsulClient{..} (Session session _) dc = do
+getSessionInfo client@ConsulClient{..} (Session sessionId _) dc = do
   let hostnameWithScheme = hostWithScheme client
   req <- createRequest hostnameWithScheme
                        ccPort
-                       (T.concat ["/v1/session/info/",session])
-                       Nothing
-                       Nothing
-                       False
+                       (T.concat ["/v1/session/info/",sessionId])
+                       noQuery
+                       noRequestBody
+                       waitFalse
                        dc
   liftIO $ withResponse req ccManager $ \ response -> do
     case responseStatus response of
