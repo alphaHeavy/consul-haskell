@@ -81,7 +81,8 @@ data Session = Session {
 
 data SessionInfo = SessionInfo {
   siLockDelay :: Maybe Word64,
-  siChecks :: [Text],
+  siNodeChecks :: [Text],
+  siServiceChecks :: Maybe [Text],
   siNode :: Text,
   siId :: Text,
   siBehavior :: Maybe SessionBehavior,
@@ -292,7 +293,8 @@ instance FromJSON SessionInfo where
   parseJSON (Object x) =
     SessionInfo
       <$> x .:? "LockDelay"
-      <*> x .: "Checks"
+      <*> x .: "NodeChecks"
+      <*> x .:? "ServiceChecks"
       <*> x .: "Node"
       <*> x .: "ID"
       <*> x .:? "Behavior"
