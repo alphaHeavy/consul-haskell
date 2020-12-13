@@ -80,16 +80,17 @@ data Session = Session {
 } deriving (Eq, Ord, Show)
 
 data SessionInfo = SessionInfo {
+  siId :: Text, -- TODO: switch to uuid
+  siName :: Maybe Text,
+  siNode :: Text,
   siLockDelay :: Maybe Word64,
+  siBehavior :: Maybe SessionBehavior,
+  siTtl :: Maybe Text,
   siChecks :: Maybe [Text],
   siNodeChecks :: Maybe [Text],
   siServiceChecks :: Maybe [Text],
-  siNode :: Text,
-  siId :: Text,
-  siBehavior :: Maybe SessionBehavior,
   siCreateIndex :: Word64,
-  siName :: Maybe Text,
-  siTtl :: Maybe Text
+  siModifyIndex :: Word64
 } deriving (Eq, Ord, Show)
 
 newtype SessionInfoList = SessionInfoList [SessionInfo]
@@ -293,16 +294,17 @@ instance FromJSON SessionInfoList where
 instance FromJSON SessionInfo where
   parseJSON (Object x) =
     SessionInfo
-      <$> x .:? "LockDelay"
+      <$> x .:  "ID"
+      <*> x .:? "Name"
+      <*> x .:  "Node"
+      <*> x .:? "LockDelay"
+      <*> x .:? "Behavior"
+      <*> x .:? "TTL"
       <*> x .:? "Checks"
       <*> x .:? "NodeChecks"
       <*> x .:? "ServiceChecks"
-      <*> x .: "Node"
-      <*> x .: "ID"
-      <*> x .:? "Behavior"
-      <*> x .: "CreateIndex"
-      <*> x .:? "Name"
-      <*> x .:? "TTL"
+      <*> x .:  "CreateIndex"
+      <*> x .:  "ModifyIndex"
   parseJSON _ = mzero
 
 instance FromJSON SessionBehavior where
