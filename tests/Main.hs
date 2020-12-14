@@ -235,8 +235,23 @@ testCreateSession = testCase "testCreateSession" $ do
   result <- createSession client req Nothing
   case result of
     Just _ -> return ()
-    Nothing -> assertFailure "testCreateSession: No session was created"
+    Nothing -> do
+      -- pause
+      threadDelay fiveSecondMicros
+      -- retry
+      result <- createSession client req Nothing
+      case result of
+        Just _ -> return ()
+        Nothing -> assertFailure "testCreateSession: No session was created"
 
+
+fiveSecondMicros :: Int
+fiveSecondMicros = oneSecondMicros * 5
+
+oneSecondMicros :: Int
+oneSecondMicros = 1 * 1000 * 1000
+
+--
 testGetSessionInfo :: TestTree
 testGetSessionInfo = testCase "testGetSessionInfo" $ do
   client@ConsulClient{..} <- newClient
