@@ -27,11 +27,15 @@ import System.IO (hFlush)
 import System.Process.Typed (proc, stopProcess)
 import qualified System.Process.Typed as PT
 import System.Random
+import System.Timeout (timeout)
 import Test.Tasty
 import Test.Tasty.HUnit
 import UnliftIO.Temporary (withSystemTempFile)
 
 import SocketUtils (isPortOpen, simpleSockAddr)
+
+sleep :: Double -> IO ()
+sleep seconds = threadDelay (ceiling (seconds * 1e6))
 
 consulPort :: PortNumber
 consulPort = 18500
@@ -234,17 +238,20 @@ testCreateSession = testCase "testCreateSession" $ do
   let req = SessionRequest Nothing (Just "testCreateSession") Nothing ["serfHealth"] (Just Release) (Just "30s")
   let loopUntilSession :: IO ()
       loopUntilSession = do
-        result <- createSession client req Nothing
-        case result of
+        resp <- createSession client req Nothing
+        case resp of
           Just _ -> return ()
           Nothing -> do
             putStrLn "Session creation failed, retrying..."
-            threadDelay fiftyMilliseconds -- pause
+            sleep 0.05  -- pause for 50ms
             loopUntilSession
-  loopUntilSession
+  result <- timeout fiveSecondMicros loopUntilSession
+  case result of
+    Just _ -> return ()
+    Nothing -> assertFailure $ "testCreateSession: Session creation failed after retrying for 5 seconds"
 
-fiftyMilliseconds :: Int
-fiftyMilliseconds = 50 * 1000
+fiveSecondMicros :: Int
+fiveSecondMicros = 5 * 1000 * 1000
 
 --
 testGetSessionInfo :: TestTree
