@@ -54,7 +54,7 @@ data ConsulClient = ConsulClient
   , ccHostname :: Text
   , ccPort :: PortNumber
   , ccWithTls :: Bool
-  , ccDatacenter :: Datacenter
+  , ccDatacenter :: Maybe Datacenter
   }
 
 data Datacenter = Datacenter Text deriving (Eq, Ord, Show)
