@@ -232,24 +232,19 @@ testCreateSession :: TestTree
 testCreateSession = testCase "testCreateSession" $ do
   client@ConsulClient{..} <- newClient
   let req = SessionRequest Nothing (Just "testCreateSession") Nothing ["serfHealth"] (Just Release) (Just "30s")
-  result <- createSession client req Nothing
-  case result of
-    Just _ -> return ()
-    Nothing -> do
-      -- pause
-      threadDelay fiveSecondMicros
-      -- retry
-      result <- createSession client req Nothing
-      case result of
-        Just _ -> return ()
-        Nothing -> assertFailure "testCreateSession: No session was created"
+  let loopUntilSession :: IO ()
+      loopUntilSession = do
+        result <- createSession client req Nothing
+        case result of
+          Just _ -> return ()
+          Nothing -> do
+            putStrLn "Session creation failed, retrying..."
+            threadDelay fiftyMilliseconds -- pause
+            loopUntilSession
+  loopUntilSession
 
-
-fiveSecondMicros :: Int
-fiveSecondMicros = oneSecondMicros * 5
-
-oneSecondMicros :: Int
-oneSecondMicros = 1 * 1000 * 1000
+fiftyMilliseconds :: Int
+fiftyMilliseconds = 50 * 1000
 
 --
 testGetSessionInfo :: TestTree
