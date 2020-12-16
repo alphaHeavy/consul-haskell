@@ -17,14 +17,29 @@ import Data.Monoid ((<>))
 #endif
 import Data.Text (unpack, Text)
 import Data.UUID
-import Network.Consul (createSession, deleteKey, destroySession,getKey, getSequencerForLock,getSessionInfo,initializeConsulClient, isValidSequencer,putKey,putKeyAcquireLock,withSession,ConsulClient(..),runService,getServiceHealth)
+import Network.Consul
+  ( createSession
+  , deleteKey
+  , destroySession
+  , getKey
+  , getSequencerForLock
+  , getSessionInfo
+  , initializeConsulClient
+  , isValidSequencer
+  , putKey
+  , putKeyAcquireLock
+  , withSession
+  , ConsulClient(..)
+  , runService
+  , getServiceHealth
+  )
 import Network.Consul.Types
 import Network.Consul
 import Network.Consul.Internal (hostWithScheme, emptyHttpManager)
 import Network.HTTP.Client
-import Network.Socket (PortNumber) --(..))
+import Network.Socket (PortNumber)
 import System.IO (hFlush)
-import System.Process.Typed (proc) --, stopProcess)
+import System.Process.Typed (proc)
 import qualified System.Process.Typed as PT
 import System.Random
 import System.Timeout (timeout)
@@ -34,28 +49,64 @@ import UnliftIO.Temporary (withSystemTempFile)
 
 import SocketUtils (isPortOpen, simpleSockAddr)
 
+-- * Internal Helper Utilities
+
+-- 5 seconds.
+fiveSecondMicros :: Int
+fiveSecondMicros = 5 * 1000 * 1000
+
+-- Name of existing health check we can rely on for tests that use the Session API
+serfHealth :: Text
+serfHealth = "serfHealth"
+
+-- list of names of service/node checks (which should exist in consul already)
+checkIds :: [Text]
+checkIds = [serfHealth]
+
+-- for requests to session API
+lockDelay :: Maybe a
+lockDelay = Nothing
+
+-- Sleep for N seconds with `threadDelay()`.
 sleep :: Double -> IO ()
 sleep seconds = threadDelay (ceiling (seconds * 1e6))
 
+-- Define a `consulHost` for use in running tests against the Consul Agent
 localhost :: ConsulHost
 localhost = "localhost"
 
+-- The IP Address of the local agent.
 localNodeAddr :: Text
 localNodeAddr = "127.0.0.1"
 
+-- Instantiate a `ConsulHost` for these tests.
 localNode :: Node
 localNode = Node localhost localNodeAddr
 
+-- The network port where the Consul Agent will listen for the HTTP API.
 consulPort :: PortNumber
 consulPort = 18500
 
+-- Initialize a new `ConsulClient`.
 newClient :: IO ConsulClient
 newClient = initializeConsulClient localhost consulPort emptyHttpManager
 
 {- Internal Tests -}
 internalKVTests :: TestTree
-internalKVTests = testGroup "Internal Key Value" [testGetInvalidKey, testPutKey, testPutKeyAcquireLock,testPutKeyReleaseLock,
-  testGetKey,testGetKeys,testListKeys,testDeleteKey,testGetNullValueKey,testDeleteRecursive]
+internalKVTests =
+  testGroup
+    "Internal Key Value"
+    [ testGetInvalidKey
+    , testPutKey
+    , testPutKeyAcquireLock
+    , testPutKeyReleaseLock
+    , testGetKey
+    , testGetKeys
+    , testListKeys
+    , testDeleteKey
+    , testGetNullValueKey
+    , testDeleteRecursive
+    ]
 
 testGetInvalidKey :: TestTree
 testGetInvalidKey = testCase "testGetInvalidKey" $ do
@@ -74,7 +125,14 @@ testPutKeyAcquireLock :: TestTree
 testPutKeyAcquireLock = testCase "testPutKeyAcquireLock" $ do
   client@ConsulClient{..} <- newClient
   let ttl = "30s"
-      req = SessionRequest lockDelay (Just "testPutKeyAcquireLock") localNode checkIds (Just Release) (Just ttl)
+      req =
+        SessionRequest
+          lockDelay
+          (Just "testPutKeyAcquireLock")
+          localNode
+          checkIds
+          (Just Release)
+          (Just ttl)
   result <- createSession client req Nothing
   case result of
     Nothing -> assertFailure "testPutKeyAcquireLock: No session was created"
@@ -90,7 +148,14 @@ testPutKeyReleaseLock :: TestTree
 testPutKeyReleaseLock = testCase "testPutKeyReleaseLock" $ do
   client@ConsulClient{..} <- newClient
   let ttl = "30s"
-      req = SessionRequest Nothing (Just "testPutKeyReleaseLock") localNode checkIds (Just Release) (Just ttl)
+      req =
+        SessionRequest
+          Nothing
+          (Just "testPutKeyReleaseLock")
+          localNode
+          checkIds
+          (Just Release)
+          (Just ttl)
   result <- createSession client req Nothing
   case result of
     Nothing -> assertFailure "testPutKeyReleaseLock: No session was created"
@@ -106,7 +171,6 @@ testPutKeyReleaseLock = testCase "testPutKeyReleaseLock" $ do
       assertEqual "testPutKeyReleaseLock: Release failed" True x2
       Just kv2 <- getKey client "/testPutKeyReleaseLock" Nothing Nothing Nothing
       assertEqual "testPutKeyAcquireLock: Session still held" Nothing (kvSession kv2)
-
 
 
 testGetKey :: TestTree
@@ -242,29 +306,20 @@ testGetServiceHealth = testCase "testGetServiceHealth" $ do
 testHealth :: TestTree
 testHealth = testGroup "Health Check Tests" [testGetServiceHealth]
 
--- Name of existing health check we can rely on for tests that use the Session API
-serfHealth :: Text
-serfHealth = "serfHealth"
-
--- list of names of service/node checks (which should exist in consul already)
-checkIds :: [Text]
-checkIds = [serfHealth]
-
--- for requests to session API
-lockDelay :: Maybe a
-lockDelay = Nothing
 
 {- Session -}
 testCreateSession :: TestTree
 testCreateSession = testCase "testCreateSession" $ do
   client@ConsulClient{..} <- newClient
   let ttl = "30s"
-      req = SessionRequest lockDelay
-                           (Just "testCreateSession")
-                           localNode
-                           checkIds
-                           (Just Release)
-                           (Just ttl)
+      req =
+        SessionRequest
+          lockDelay
+          (Just "testCreateSession")
+          localNode
+          checkIds
+          (Just Release)
+          (Just ttl)
   let loopUntilSession :: IO ()
       loopUntilSession = do
         resp <- createSession client req Nothing
@@ -279,19 +334,19 @@ testCreateSession = testCase "testCreateSession" $ do
     Just _ -> return ()
     Nothing -> assertFailure $ "testCreateSession: Session creation failed after retrying for 5 seconds"
 
-fiveSecondMicros :: Int
-fiveSecondMicros = 5 * 1000 * 1000
 
 testGetSessionInfo :: TestTree
 testGetSessionInfo = testCase "testGetSessionInfo" $ do
   client@ConsulClient{..} <- newClient
   let ttl = "30s"
-      req = SessionRequest lockDelay
-                           (Just "testGetSessionInfo")
-                           localNode
-                           checkIds
-                           (Just Release)
-                           (Just ttl)
+      req =
+        SessionRequest
+          lockDelay
+          (Just "testGetSessionInfo")
+          localNode
+          checkIds
+          (Just Release)
+          (Just ttl)
   result <- createSession client req Nothing
   case result of
     Just x -> do
@@ -421,19 +476,48 @@ testIsValidSequencer = testCase "testIsValidSequencer" $ do
 
 
 sessionWorkflowTests :: TestTree
-sessionWorkflowTests = testGroup "Session Workflow Tests" [testWithSessionCancel,testSessionMaintained]
+sessionWorkflowTests =
+  testGroup
+    "Session Workflow Tests"
+    [ testWithSessionCancel
+    , testSessionMaintained
+    ]
 
 runServiceTests :: TestTree
-runServiceTests = testGroup "Run Service Tests" [testRunServiceTtl]
+runServiceTests =
+  testGroup
+    "Run Service Tests"
+    [ testRunServiceTtl
+    ]
 
 agentTests :: TestTree
-agentTests = testGroup "Agent Tests" [testGetSelf,testRegisterService]
+agentTests =
+  testGroup
+    "Agent Tests"
+    [ testGetSelf
+    , testRegisterService
+    ]
 
 sequencerTests :: TestTree
-sequencerTests = testGroup "Sequencer Tests" [testIsValidSequencer]
+sequencerTests =
+  testGroup
+    "Sequencer Tests"
+    [ testIsValidSequencer
+    ]
 
 allTests :: TestTree
-allTests = testGroup "All Tests" [testInternalSession, internalKVTests, sessionWorkflowTests, agentTests,testHealth, clientKVTests, runServiceTests, sequencerTests]
+allTests =
+  testGroup
+    "All Tests"
+    [ testInternalSession
+    , internalKVTests
+    , sessionWorkflowTests
+    , agentTests
+    , testHealth
+    , clientKVTests
+    , runServiceTests
+    , sequencerTests
+    ]
 
 -- Backwards compatible `withProcessTerm`.
 withProcessTerm :: PT.ProcessConfig stdin stdout stderr -> (PT.Process stdin stdout stderr -> IO a) -> IO a
@@ -464,7 +548,7 @@ main = do
           proc
             "consul"
             [ "agent", "-dev"
-            , "-node", (unpack localhost) -- hardcode node name as "localhost"
+            , "-node", (unpack localhost) -- hardcode node name as "localhost" * see below
             , "-log-level", "err"
           --, "-log-level", "debug"        -- for debugging
             , "-http-port", show (fromIntegral consulPort :: Int)
@@ -476,3 +560,13 @@ main = do
       -- TODO: should we instead query consul to lookup the node registration?
       sleep 3
       defaultMain allTests
+
+--
+-- Regarding why we set an explicit node name (via `-node`) when running consul:
+--
+-- When we create a session, we need to reference a Node that has been
+-- registered in Consul's node catalog. By telling the agent to use localhost,
+-- after the agent boots, we can expect that the agent has registered a node for
+-- itself and that the node's name is localhost, so that when we create a session,
+-- we can simply reference that existing/registered node from the agent instead
+-- of having to make up and register a Node for the test.
