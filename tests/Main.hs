@@ -269,9 +269,24 @@ testRegisterService = testCase "testRegisterService" $ do
   val <- registerService client req Nothing
   assertEqual "testRegisterService: Service was not created" val True
   mService <- getService client "testService" Nothing Nothing
+  let serviceWasNotFound = assertFailure "testRegisterService: Service was not found"
   case mService of
+    Just [] -> serviceWasNotFound
+    Nothing -> serviceWasNotFound
     Just _ -> return ()
-    Nothing -> assertFailure "testRegisterService: Service was not found"
+
+testDeregisterService :: TestTree
+testDeregisterService = testCase "testDeregisterService" $ do
+  client@ConsulClient{..} <- newClient
+  let req = RegisterService Nothing "testService" ["test"] Nothing Nothing
+  val <- registerService client req Nothing
+  assertEqual "testDeregisterService: Service was not created" val True
+  deregisterService client (rsName req) Nothing
+  mService <- getService client (rsName req) Nothing Nothing
+  case mService of
+    Just [] -> return ()
+    Nothing -> return ()
+    Just s -> assertFailure $ "testDeregisterService: Service was found... " <> show s
 
 testGetSelf :: TestTree
 testGetSelf = testCase "testGetSelf" $ do
@@ -496,6 +511,7 @@ agentTests =
     "Agent Tests"
     [ testGetSelf
     , testRegisterService
+    , testDeregisterService
     ]
 
 sequencerTests :: TestTree
