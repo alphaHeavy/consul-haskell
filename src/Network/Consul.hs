@@ -582,12 +582,18 @@ registerService client request dc = do
       _ -> return False
 
 
-deregisterService :: MonadIO m => ConsulClient -> Text -> m ()
-deregisterService client service = do
+deregisterService :: MonadIO m => ConsulClient -> Text -> Maybe Datacenter -> m ()
+deregisterService client service dc = do
   let portNumber = ccPort client
       manager = ccManager client
       hostname = hostWithScheme client
-  initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostname, ":", T.pack $ show portNumber ,"/v1/agent/service/deregister/", service]
+  initReq <- createRequest hostname
+                           portNumber
+                           (T.concat ["/v1/agent/service/deregister/", service])
+                           Nothing
+                           (Just "") -- forces PUT
+                           False
+                           dc
   liftIO $ withResponse initReq manager $ \ response -> do
     _bodyParts <- brConsume $ responseBody response
     return ()
