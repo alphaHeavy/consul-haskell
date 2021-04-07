@@ -4,7 +4,7 @@ synopsis:            A consul client for Haskell
 description:
   A consul client for Haskell
   .
-  Requires consul 0.5 or later. Tested with consul 1.6.
+  Requires consul 1.0 or later. Tested with the latest consul release in each of the release series from 1.3 to 1.9, as well as 1.10.0-alpha.
 
 license:             BSD3
 license-file:        LICENSE
