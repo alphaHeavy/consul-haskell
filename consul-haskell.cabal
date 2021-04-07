@@ -9,7 +9,7 @@ description:
 license:             BSD3
 license-file:        LICENSE
 author:              Steve Severance
-maintainer:          sseverance@alphaheavy.com
+maintainer:          ketzacoatl@protonmail.com
 homepage:            https://github.com/alphaHeavy/consul-haskell
 bug-reports:         https://github.com/alphaHeavy/consul-haskell/issues
 category:            Network
