@@ -24,7 +24,8 @@ jobs:
           - "1.6.10"
           - "1.7.11"
           - "1.8.7"
-          - "1.9.0"
+          - "1.9.4"
+          - "1.10.0-alpha"
     steps:
     - uses: actions/checkout@v2
       if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
