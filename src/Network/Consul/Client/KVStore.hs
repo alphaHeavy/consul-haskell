@@ -1,0 +1,218 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | TODO: document module
+module Network.Consul.Client.KVStore
+  ( deleteKey
+  , getKey
+  , getKeys
+  , listKeys
+  , putKey
+  , putKeyAcquireLock
+  , putKeyReleaseLock
+  ) where
+
+import Control.Concurrent hiding (killThread)
+import Control.Monad (forever)
+import Control.Monad.IO.Class
+import Control.Monad.Catch (MonadMask)
+import Control.Retry
+import Data.Aeson (Value(..), decode,encode)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.HashMap.Strict as H
+import Data.Maybe (catMaybes, isJust, listToMaybe)
+import Data.Monoid ((<>))
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.Read as TR
+import Data.Word
+import qualified Data.Vector as V
+import qualified Network.Consul.Internal as I
+import Network.Consul.Types
+import Network.HTTP.Client -- (method, Manager, responseBody)
+import Network.HTTP.Client.TLS (newTlsManager, newTlsManagerWith, tlsManagerSettings)
+import Network.HTTP.Types
+import Network.Socket (PortNumber)
+import UnliftIO (MonadUnliftIO, async, cancel, finally, wait, waitAnyCancel, withAsync)
+
+import Network.Consul.Internal
+
+ 
+-- | TODO: Document!
+deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> m Bool
+deleteKey _client@ConsulClient{..} key recurse = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", key])
+                           (if recurse then Just "recurse" else Nothing)
+                           Nothing
+                           False
+                           ccDatacenter
+  let httpReq = initReq { method = "DELETE"}
+  liftIO $ withResponse httpReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+
+-- | TODO: Document!
+getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m (Maybe KeyValue)
+getKey _client@ConsulClient{..} key index consistency = do
+  let hostnameWithScheme = hostWithScheme _client
+  request <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/",key])
+                           fquery
+                           Nothing
+                           (isJust index)
+                           ccDatacenter
+  liftIO $ withResponse request ccManager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ listToMaybe =<< (decode $ BL.fromStrict body)
+      _ -> return Nothing
+  where
+    cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
+    ind = fmap (\ x -> T.concat["index=", T.pack $ show x]) index
+    query = T.intercalate "&" $ catMaybes [cons,ind]
+    fquery = if query /= T.empty then Just query else Nothing
+
+
+-- | TODO: Document!
+getKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m [KeyValue]
+getKeys _client@ConsulClient{..} key index consistency = do
+  let hostnameWithScheme = hostWithScheme _client
+  request <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/",key])
+                           fquery
+                           Nothing
+                           (isJust index)
+                           ccDatacenter
+  liftIO $ withResponse request ccManager $ \ response -> do
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ maybe [] id $ decode $ BL.fromStrict body
+      _ -> return []
+  where
+    cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
+    ind = fmap (\ x -> T.concat["index=", T.pack $ show x]) index
+    query = T.intercalate "&" $ catMaybes [cons,ind, Just "recurse"]
+    fquery = if query /= T.empty then Just query else Nothing
+
+
+-- | TODO: Document!
+listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m [Text]
+listKeys _client@ConsulClient{..} prefix index consistency = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", prefix])
+                           fquery
+                           Nothing
+                           (isJust index)
+                           ccDatacenter
+  liftIO $ withResponse initReq ccManager $ \ response ->
+    case responseStatus response of
+      x | x == status200 -> do
+        bodyParts <- brConsume $ responseBody response
+        let body = B.concat bodyParts
+        return $ maybe [] id $ decode $ BL.fromStrict body
+      _ -> return []
+  where
+    cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
+    ind = fmap (\ x -> T.concat["index=", T.pack $ show x]) index
+    query = T.intercalate "&" $ catMaybes [cons,ind, Just "keys"]
+    fquery = if query /= T.empty then Just query else Nothing
+
+
+-- | TODO: Document!
+putKey :: MonadIO m => ConsulClient -> KeyValuePut -> m Bool
+putKey _client@ConsulClient{..} putRequest = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", kvpKey putRequest])
+                           fquery
+                           (Just $ kvpValue putRequest)
+                           False
+                           ccDatacenter
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = I.decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags putRequest
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex putRequest
+    query = T.intercalate "&" $ catMaybes [flags,cas]
+    fquery = if query /= T.empty then Just query else Nothing
+
+
+-- | TODO: Document!
+putKeyAcquireLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> m Bool
+putKeyAcquireLock _client@ConsulClient{..} request (Session session _) = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", kvpKey request])
+                           fquery
+                           (Just $ kvpValue request)
+                           False
+                           ccDatacenter
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags request
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex request
+    acquire = T.concat["acquire=",session]
+    query = T.intercalate "&" $ catMaybes [flags,cas,Just acquire]
+    fquery = if query /= T.empty then Just query else Nothing
+
+
+-- | TODO: Document!
+putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> m Bool
+putKeyReleaseLock _client@ConsulClient{..} request (Session session _) = do
+  let hostnameWithScheme = hostWithScheme _client
+  initReq <- createRequest hostnameWithScheme
+                           ccPort
+                           (T.concat ["/v1/kv/", kvpKey request])
+                           fquery
+                           (Just $ kvpValue request)
+                           False
+                           ccDatacenter
+  liftIO $ withResponse initReq ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    let result = decodeAndStrip body
+    case result of
+      "true" -> return True
+      "false" -> return False
+      _ -> return False
+  where
+    flags = fmap (\ x -> T.concat["flags=", T.pack $ show x]) $ kvpFlags request
+    cas = fmap (\ x -> T.concat["cas=",T.pack $ show x]) $ kvpCasIndex request
+    release = T.concat["release=",session]
+    query = T.intercalate "&" $ catMaybes [flags,cas,Just release]
+    fquery = if query /= T.empty then Just query else Nothing
+

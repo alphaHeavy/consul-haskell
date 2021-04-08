@@ -27,6 +27,19 @@ library
     src
   exposed-modules:
     Network.Consul
+    -- Consul Client API
+    Network.Consul.Client.Agent
+    Network.Consul.Client.Catalog
+    Network.Consul.Client.Health
+    Network.Consul.Client.Init
+    Network.Consul.Client.KVStore
+    Network.Consul.Client.Session
+
+    -- higher level stuff
+    Network.Consul.Misc
+    Network.Consul.Sequencer
+
+    -- Internals
     Network.Consul.Internal
     Network.Consul.Types
   build-depends:
