@@ -76,8 +76,8 @@ initializeConsulClient hostname port man = do
                         Just x -> return x
                         Nothing -> newTlsManager
   return $ ConsulClient manager hostname port False Nothing
-                                                 -- ^ we omit a Datacenter here for brevity
-                                                 --   it's still allowed via record updates 
+                                                 -- we omit a Datacenter here for brevity
+                                                 -- it's still allowed via record updates
 
 
 initializeTlsConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
