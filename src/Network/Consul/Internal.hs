@@ -10,17 +10,13 @@ module Network.Consul.Internal
   ) where
 
 import Control.Monad.IO.Class
-import Data.Aeson (encode)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
 import Data.Maybe
-import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Network.Consul.Types
 import Network.HTTP.Client
-import Network.HTTP.Types
+import Network.HTTP.Types ()
 import Network.Socket (PortNumber)
 
 hostWithScheme :: ConsulClient -> ConsulHost
@@ -37,14 +33,14 @@ createRequest :: MonadIO m => ConsulHost
                            -> WaitFlag
                            -> Maybe Datacenter
                            -> m Request
-createRequest hostWithScheme
+createRequest consulHostWithScheme
               portNumber
               endpoint
               query
               body
               wait
               dc = do
-  let baseUrl = T.concat [hostWithScheme,":",T.pack $ show portNumber,endpoint,needQueryString
+  let baseUrl = T.concat [consulHostWithScheme,":",T.pack $ show portNumber,endpoint,needQueryString
                          ,maybe "" id query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
   initReq <- liftIO $ parseUrlThrow $ T.unpack baseUrl
   case body of

@@ -368,9 +368,14 @@ runService client request action = do
         Nothing -> return ()
     False -> return ()
   where
-    ttlFunc y@(Ttl x) = do
+    ttlFunc (Script _ _) = undefined -- TODO: what should this be instead??
+    ttlFunc (Http _) = undefined     -- TODO: what should this be instead??
+    ttlFunc (Ttl x) = do
       let ttl = parseTtl x
-      liftIO $ threadDelay $ (ttl - (fromIntegral $ floor (fromIntegral ttl / fromIntegral 2))) * 1000000
+          floorTtl = (floor (fromIntegral ttl / 2 :: Double))
+          delay = (ttl - floorTtl) * 1000000
+      -- pause for delay, based on ttl
+      liftIO $ threadDelay $ delay
       let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
       passHealthCheck client checkId
 
@@ -444,8 +449,15 @@ getSessionInfo client@ConsulClient{..} (Session sessionId _) = do
 
 
 -- TODO: use `name` in function?
-withSession :: forall m a. (MonadMask m, MonadUnliftIO m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
-withSession client@ConsulClient{..} name delay session action lostAction = (do
+withSession :: forall m a. (MonadMask m, MonadUnliftIO m)
+            => ConsulClient
+            -> Maybe Text
+            -> Int
+            -> Session
+            -> (Session -> m a)
+            -> m a
+            -> m a
+withSession client@ConsulClient{..} _ delay session action lostAction = (do
   withAsync (action session) $ \ mainAsync -> withAsync extendSession $ \ extendAsync -> do
     result :: a <- return . snd =<< waitAnyCancel [mainAsync,extendAsync]
     return result) `finally` (destroySession client session)
@@ -461,7 +473,6 @@ withSession client@ConsulClient{..} name delay session action lostAction = (do
 
 getSequencerForLock :: MonadIO m => ConsulClient -> Text -> Session -> m (Maybe Sequencer)
 getSequencerForLock client key session = do
-  let dc = ccDatacenter client
   kv <- getKey client key Nothing (Just Consistent)
   case kv of
     Just k -> do
