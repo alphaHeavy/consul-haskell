@@ -361,7 +361,18 @@ type ConsulQuery = Text
 type ConsulRequestBody = ByteString
 type WaitFlag = Bool
 
+-- | TODO: Document
+waitTrue :: Bool
 waitTrue = True
+
+-- | TODO: Document
+waitFalse :: Bool
 waitFalse = False
+
+-- | TODO: Document
+noQuery :: Maybe a
 noQuery = Nothing
+
+-- | TODO: Document
+noRequestBody :: Maybe a
 noRequestBody = Nothing
