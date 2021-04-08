@@ -29,12 +29,23 @@ library
     Import
     Network.Consul
     -- Consul Client API
+    Network.Consul.Client.Acl
     Network.Consul.Client.Agent
     Network.Consul.Client.Catalog
+    Network.Consul.Client.Config
+    Network.Consul.Client.Connect
+    Network.Consul.Client.Events
     Network.Consul.Client.Health
     Network.Consul.Client.Init
     Network.Consul.Client.KVStore
+    Network.Consul.Client.Namespaces
+    Network.Consul.Client.Operator
+    Network.Consul.Client.PreparedQueries
     Network.Consul.Client.Session
+    Network.Consul.Client.Snapshots
+    Network.Consul.Client.Status
+    Network.Consul.Client.Transactions
+ -- Network.Consul.Client.
 
     -- higher level stuff
     Network.Consul.Misc
