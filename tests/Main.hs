@@ -7,7 +7,6 @@ import Control.Concurrent
 import Control.Monad (when)
 import Control.Monad.IO.Class
 import Control.Retry
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import Data.Maybe
 #if MIN_VERSION_base(4,11,0)
@@ -35,8 +34,7 @@ import Network.Consul
   )
 import Network.Consul.Types
 import Network.Consul
-import Network.Consul.Internal (hostWithScheme, emptyHttpManager)
-import Network.HTTP.Client
+import Network.Consul.Internal (emptyHttpManager)
 import Network.Socket (PortNumber)
 import System.IO (hFlush)
 import System.Process.Typed (proc)
@@ -244,7 +242,7 @@ testDeleteRecursive = testCase "testDeleteRecursive" $ do
   assertEqual "testDeleteKey: Write failed" True x1
   x2 <- putKey client put2
   assertEqual "testDeleteKey: Write failed" True x2
-  deleteKey client "/testDeleteRecursive/" True
+  _ <- deleteKey client "/testDeleteRecursive/" True
   x3 <- getKey client "/testDeleteRecursive/1" Nothing Nothing
   assertEqual "testDeleteKey: Key was not deleted" Nothing x3
 
@@ -261,7 +259,7 @@ testDeleteRecursiveClient = testCase "testDeleteRecursiveClient" $ do
   assertEqual "testDeleteKey: Write failed" True x1
   x2 <- putKey client put2
   assertEqual "testDeleteKey: Write failed" True x2
-  deleteKey client "/testDeleteRecursive/" True
+  _ <- deleteKey client "/testDeleteRecursive/" True
   x3 <- getKey client "/testDeleteRecursive/1" Nothing Nothing
   assertEqual "testDeleteKey: Key was not deleted" Nothing x3
 
@@ -317,7 +315,8 @@ testGetServiceHealth = testCase "testGetServiceHealth" $ do
       liftIO $ sleep 1
       r2 <- getServiceHealth client "testGetServiceHealth"
       case r2 of
-        Just [x] -> return ()
+        Just [_] -> return ()
+        Just (_:_:_) -> assertFailure "testGetServiceHealth: No Services Returned"
         Just [] -> assertFailure "testGetServiceHealth: No Services Returned"
         Nothing -> assertFailure "testGetServiceHealth: Failed to parse result"
     False -> assertFailure "testGetServiceHealth: Service was not created"
@@ -463,6 +462,8 @@ testRunServiceTtl = testCase "testRunServiceTtl" $ do
       mHealth <- getServiceHealth client "testRunServiceTtl"
       case mHealth of
         Nothing -> assertFailure "testRunServiceTtl: No healthcheck was found"
+        Just (_:_:_) -> assertFailure "testRunServiceTtl: No healthcheck was found"
+        Just [] -> assertFailure "testRunServiceTtl: No healthcheck was found"
         Just [x] -> do
           let checks = hChecks x
           mapM_ (testCheck) checks
