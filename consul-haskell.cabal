@@ -26,6 +26,7 @@ library
   hs-source-dirs:
     src
   exposed-modules:
+    Import
     Network.Consul
     -- Consul Client API
     Network.Consul.Client.Agent

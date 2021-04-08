@@ -12,31 +12,10 @@ module Network.Consul.Client.Session
   , withSession
   ) where
 
-import Control.Concurrent hiding (killThread)
-import Control.Monad (forever)
-import Control.Monad.IO.Class
-import Control.Monad.Catch (MonadMask)
-import Control.Retry
-import Data.Aeson (Value(..), decode,encode)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.HashMap.Strict as H
-import Data.Maybe (catMaybes, isJust, listToMaybe)
-import Data.Monoid ((<>))
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Read as TR
-import Data.Word
-import qualified Data.Vector as V
-import qualified Network.Consul.Internal as I
-import Network.Consul.Types
-import Network.HTTP.Client -- (method, Manager, responseBody)
-import Network.HTTP.Client.TLS (newTlsManager, newTlsManagerWith, tlsManagerSettings)
-import Network.HTTP.Types
-import Network.Socket (PortNumber)
-import UnliftIO (MonadUnliftIO, async, cancel, finally, wait, waitAnyCancel, withAsync)
-
-import Network.Consul.Internal
+import Import
+import qualified Data.ByteString as B (concat) 
+import qualified Data.ByteString.Lazy as BL (toStrict, fromStrict)
+import qualified Data.Text as T (concat, empty, pack, intercalate)
 
 -- | TODO: Document
 createSession :: MonadIO m => ConsulClient -> SessionRequest -> m (Maybe Session)

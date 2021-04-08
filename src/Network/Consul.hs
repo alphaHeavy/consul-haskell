@@ -49,6 +49,8 @@ module Network.Consul (
   , module Network.Consul.Types
 ) where
 
+import Import
+
 import Network.Consul.Types
 -- Consul Client APIs
 import Network.Consul.Client.Agent
