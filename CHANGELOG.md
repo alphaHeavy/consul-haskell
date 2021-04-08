@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.6.1
+
+Code clean up to address warnings from GHC.
+See [PR#54](https://github.com/alphaHeavy/consul-haskell/pull/54) for more info.
+
 ## v0.6.0
 
 This release primarily moves the Datacenter into the ConsulClient data structure.
