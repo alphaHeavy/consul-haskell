@@ -2,23 +2,28 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | TODO: Document
 module Network.Consul.Internal
   ( hostWithScheme
   , createRequest 
   , decodeAndStrip
   , emptyHttpManager
+  , parseTtl
   ) where
 
 import Control.Monad.IO.Class
 import Data.ByteString (ByteString)
 import Data.Maybe
+import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Data.Text.Read as TR
 import Network.Consul.Types
 import Network.HTTP.Client
 import Network.HTTP.Types ()
 import Network.Socket (PortNumber)
 
+-- | TODO: Document
 hostWithScheme :: ConsulClient -> ConsulHost
 hostWithScheme ConsulClient{..} = scheme `T.append` ccHostname
   where scheme = if ccWithTls then "https://" else "http://"
@@ -53,10 +58,17 @@ createRequest consulHostWithScheme
 
 {- Key Value Store -}
 
+-- | TODO: Document
 decodeAndStrip :: ByteString -> String
 decodeAndStrip = T.unpack . T.strip . TE.decodeUtf8
 
 
+-- | TODO: Document
 -- a convenience utility for clarity
 emptyHttpManager :: Maybe Manager
 emptyHttpManager = Nothing
+
+
+-- | TODO: Document
+parseTtl :: Integral t => Text -> t
+parseTtl ttl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
