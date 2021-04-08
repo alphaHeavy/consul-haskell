@@ -17,6 +17,9 @@ build: require-INSTALL_TO
 test: require-INSTALL_TO
 	PATH=${INSTALL_TO}/:${PATH} stack test --system-ghc --bench
 
+doc: require-INSTALL_TO
+	PATH=${INSTALL_TO}/:${PATH} stack build --haddock --haddock-deps --haddock-internal --haddock-hyperlink-source
+
 require-%:
 	if [ "${${*}}" = "" ]; then \
 		echo "ERROR: Environment variable not set: \"$*\""; \
