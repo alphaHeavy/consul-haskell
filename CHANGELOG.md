@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.6.3
+
+Scope out placeholders for WIP client API functions, see
+[PR#60](https://github.com/alphaHeavy/consul-haskell/pull/60) for more info.
+
 ## v0.6.2
 
 Code shuffle!
