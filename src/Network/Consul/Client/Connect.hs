@@ -8,4 +8,4 @@ module Network.Consul.Client.Connect
   ( 
   ) where
 
-
+import Import
