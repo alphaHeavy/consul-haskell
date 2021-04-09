@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.6.2
+
+Code shuffle!
+
+Consul has a lot of APIs, and having all the client API functions in
+`src/Network/Consul.hs` has already made a bit of a mess of that file.
+
+By introducting an `Import` module (where we can consolidate the majority of
+the functions and data types we need) and by breaking out each of Consul's APIs
+into their own module, we can more quickly and precisely navigate the source.
+
+Next, we'll add a bunch of modules and stubs for each of the APIs.
+
+
 ## v0.6.1
 
 Code clean up to address warnings from GHC.
