@@ -18,7 +18,7 @@ test: require-INSTALL_TO
 	PATH=${INSTALL_TO}/:${PATH} stack test --system-ghc --bench
 
 doc: require-INSTALL_TO
-	PATH=${INSTALL_TO}/:${PATH} stack build --haddock --haddock-deps --haddock-internal --haddock-hyperlink-source
+	PATH=${INSTALL_TO}/:${PATH} stack build --system-ghc --no-run-tests --no-run-benchmarks --haddock --haddock-deps --haddock-internal --haddock-hyperlink-source
 
 require-%:
 	if [ "${${*}}" = "" ]; then \
