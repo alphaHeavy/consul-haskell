@@ -68,19 +68,13 @@ jobs:
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       run: |
-        make build
+        make doc
 
     - name: Stack Test
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       run: |
         make test
-
-    - name: Stack Doc
-      env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-      run: |
-        make doc
 
   # Inspired by:
   # https://nix.dev/tutorials/continuous-integration-github-actions.html
