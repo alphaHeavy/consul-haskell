@@ -8,4 +8,4 @@ module Network.Consul.Client.PreparedQueries
   ( 
   ) where
 
-
+import Import

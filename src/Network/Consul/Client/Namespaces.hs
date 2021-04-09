@@ -8,4 +8,4 @@ module Network.Consul.Client.Namespaces
   ( 
   ) where
 
-
+import Import

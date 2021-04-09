@@ -8,4 +8,4 @@ module Network.Consul.Client.Operator
   ( 
   ) where
 
-
+import Import
