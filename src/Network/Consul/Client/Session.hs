@@ -15,7 +15,7 @@ module Network.Consul.Client.Session
 import Import
 import qualified Data.ByteString as B (concat) 
 import qualified Data.ByteString.Lazy as BL (toStrict, fromStrict)
-import qualified Data.Text as T (concat, empty, pack, intercalate)
+import qualified Data.Text as T (concat)
 
 -- | TODO: Document
 createSession :: MonadIO m => ConsulClient -> SessionRequest -> m (Maybe Session)
@@ -91,7 +91,7 @@ getSessionInfo client@ConsulClient{..} (Session sessionId _) = do
 -- | TODO: Document
 -- TODO: use `name` in function?
 withSession :: forall m a. (MonadMask m, MonadUnliftIO m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
-withSession client@ConsulClient{..} name delay session action lostAction = (do
+withSession client@ConsulClient{..} _ delay session action lostAction = (do
   withAsync (action session) $ \ mainAsync -> withAsync extendSession $ \ extendAsync -> do
     result :: a <- return . snd =<< waitAnyCancel [mainAsync,extendAsync]
     return result) `finally` (destroySession client session)

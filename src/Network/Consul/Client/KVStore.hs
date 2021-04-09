@@ -16,8 +16,8 @@ module Network.Consul.Client.KVStore
 
 import Import
 import qualified Data.ByteString as B (concat) 
-import qualified Data.ByteString.Lazy as BL (toStrict, fromStrict)
-import qualified Data.Text as T (concat, empty, pack, intercalate, unpack)
+import qualified Data.ByteString.Lazy as BL (fromStrict)
+import qualified Data.Text as T (concat, empty, pack, intercalate)
  
 -- | TODO: Document!
 deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> m Bool

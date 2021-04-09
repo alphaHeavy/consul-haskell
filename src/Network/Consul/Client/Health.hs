@@ -17,7 +17,7 @@ module Network.Consul.Client.Health
 import Import
 import qualified Data.ByteString as B (concat) 
 import qualified Data.ByteString.Lazy as BL (toStrict, fromStrict)
-import qualified Data.Text as T (concat, empty, pack, intercalate, unpack)
+import qualified Data.Text as T (concat, pack, unpack)
 
 -- | TODO: Document
 {-getHealthChecks :: MonadIO m => Manager -> Text -> PortNumber -> Maybe Datacenter -> m [Check]
