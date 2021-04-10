@@ -5,7 +5,7 @@
 
 -- | TODO: document module
 -- https://www.consul.io/api-docs/coordinate
-module Network.Consul.Client.Acl
+module Network.Consul.Client.Coordinates
   ( getNodeLANCoordinates
   , listNodeLANCoordinates
   , listServerWANCoordinates
