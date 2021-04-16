@@ -1,6 +1,8 @@
 module Import
   ( module Import
   , module Util
+  , module Network.Consul.Types
+  , module Network.Consul
   ) where
 
 import qualified Control.Concurrent as Import
@@ -29,8 +31,8 @@ import qualified Network.Consul as Import
   , runService
   , getServiceHealth
   )
-import qualified Network.Consul.Types as Import
-import qualified Network.Consul as Import
+import Network.Consul.Types
+import Network.Consul
 import qualified Network.Consul.Internal as Import (hostWithScheme, emptyHttpManager)
 import qualified Network.HTTP.Client as Import
 import qualified Network.Socket as Import (PortNumber)
