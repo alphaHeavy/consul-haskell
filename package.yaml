@@ -21,7 +21,6 @@ description:
   Requires consul 1.0 or later. Tested with the latest consul release in each of the release series from 1.3 to 1.9, as well as 1.10.0-alpha.
   For more info, please see the README on GitHub at <https://github.com/alphaHeavy/consul-haskell#readme>.
 
-
 library:
   source-dirs: src
   dependencies:
@@ -46,8 +45,32 @@ library:
   ghc-options:
     -Wall
 
-
 tests:
+  sydtest-testsuite:
+    main: Spec.hs
+    source-dirs: test
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -Wall
+    dependencies:
+      - base >= 4.7 && < 5
+      - bytestring
+      - consul-haskell
+      - http-client
+      - network
+      - random
+      - retry
+      - safe-coloured-text
+      - safe-coloured-text-terminfo
+      - sydtest
+      - sydtest-discover
+      - text
+      - typed-process
+      - unliftio
+      - uuid
+
   tasty-hunit-testsuite:
     main: Main.hs
     source-dirs: tests
