@@ -43,7 +43,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B64
 import Data.Foldable
 import Data.Int
-import Data.Text(Text)
+import Data.Text (Text)
 import qualified Data.Text.Encoding as TE
 import Data.Word
 import Network.HTTP.Client (Manager)
