@@ -1,112 +1,105 @@
-name:                consul-haskell
-version:             0.6.3
-synopsis:            A consul client for Haskell
-description:
-  A consul client for Haskell
-  .
-  Requires consul 1.0 or later. Tested with the latest consul release in each of the release series from 1.3 to 1.9, as well as 1.10.0-alpha.
+cabal-version: 1.12
 
-license:             BSD3
-license-file:        LICENSE
-author:              Steve Severance
-maintainer:          ketzacoatl@protonmail.com
-homepage:            https://github.com/alphaHeavy/consul-haskell
-bug-reports:         https://github.com/alphaHeavy/consul-haskell/issues
-category:            Network
+-- This file has been generated from package.yaml by hpack version 0.34.2.
+--
+-- see: https://github.com/sol/hpack
 
-build-type:          Simple
-cabal-version:       >= 1.10
-
+name:           consul-haskell
+version:        0.6.3
+synopsis:       A consul client for Haskell
+description:    A consul client for Haskell . Requires consul 1.0 or later. Tested with the latest consul release in each of the release series from 1.3 to 1.9, as well as 1.10.0-alpha. For more info, please see the README on GitHub at <https://github.com/alphaHeavy/consul-haskell#readme>.
+category:       Network
+homepage:       https://github.com/alphaHeavy/consul-haskell
+bug-reports:    https://github.com/alphaHeavy/consul-haskell/issues
+author:         Steve Severance
+maintainer:     ketzacoatl@protonmail.com
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
 extra-source-files:
-  tests/Main.hs
-
-library
-  default-language:
-    Haskell2010
-  hs-source-dirs:
-    src
-  exposed-modules:
-    Import
-    Network.Consul
-    -- Consul Client API
-    Network.Consul.Client.Acl
-    Network.Consul.Client.Agent
-    Network.Consul.Client.Catalog
-    Network.Consul.Client.Config
-    Network.Consul.Client.Connect
-    Network.Consul.Client.Events
-    Network.Consul.Client.Health
-    Network.Consul.Client.Init
-    Network.Consul.Client.KVStore
-    Network.Consul.Client.Namespaces
-    Network.Consul.Client.Operator
-    Network.Consul.Client.PreparedQueries
-    Network.Consul.Client.Session
-    Network.Consul.Client.Snapshots
-    Network.Consul.Client.Status
-    Network.Consul.Client.Transactions
- -- Network.Consul.Client.
-
-    -- higher level stuff
-    Network.Consul.Misc
-    Network.Consul.Sequencer
-
-    -- Internals
-    Network.Consul.Internal
-    Network.Consul.Types
-  build-depends:
-    aeson,
-    base                       >= 4.10 && < 5,
-    base64-bytestring,
-    bytestring,
-    connection,
-    either,
-    exceptions,
-    http-client,
-    http-client-tls,
-    http-types,
-    network,
-    retry,
-    stm,
-    text,
-    transformers,
-    unliftio >= 0.2.4,
-    unordered-containers,
-    vector
-  ghc-options:
-    -Wall
-
-test-suite consul-haskell-test
-  default-language:
-    Haskell2010
-  hs-source-dirs:
-    tests
-  type:
-    exitcode-stdio-1.0
-  main-is:
-    Main.hs
-  other-modules:
-    SocketUtils
-  build-depends:
-    base                       >= 4.6 && < 5,
-    bytestring,
-    consul-haskell,
-    http-client,
-    network,
-    random,
-    retry,
-    tasty,
-    tasty-hunit,
-    text,
-    transformers,
-    typed-process,
-    unliftio,
-    uuid,
-    HUnit                      >= 1.2
-  ghc-options:
-    -Wall
-
+    README.md
+    CHANGELOG.md
 
 source-repository head
-  type:     git
-  location: https://github.com/alphaHeavy/consul-haskell.git
+  type: git
+  location: https://github.com/alphaHeavy/consul-haskell
+
+library
+  exposed-modules:
+      Import
+      Network.Consul
+      Network.Consul.Client.Acl
+      Network.Consul.Client.Agent
+      Network.Consul.Client.Catalog
+      Network.Consul.Client.Config
+      Network.Consul.Client.Connect
+      Network.Consul.Client.Coordinates
+      Network.Consul.Client.Events
+      Network.Consul.Client.Health
+      Network.Consul.Client.Init
+      Network.Consul.Client.KVStore
+      Network.Consul.Client.Namespaces
+      Network.Consul.Client.Operator
+      Network.Consul.Client.PreparedQueries
+      Network.Consul.Client.Session
+      Network.Consul.Client.Snapshots
+      Network.Consul.Client.Status
+      Network.Consul.Client.Transactions
+      Network.Consul.Internal
+      Network.Consul.Misc
+      Network.Consul.Sequencer
+      Network.Consul.Types
+  other-modules:
+      Paths_consul_haskell
+  hs-source-dirs:
+      src
+  ghc-options: -Wall
+  build-depends:
+      aeson
+    , base >=4.10 && <5
+    , base64-bytestring
+    , bytestring
+    , connection
+    , either
+    , exceptions
+    , http-client
+    , http-client-tls
+    , http-types
+    , network
+    , retry
+    , stm
+    , text
+    , transformers
+    , unliftio >=0.2.4
+    , unordered-containers
+    , vector
+  default-language: Haskell2010
+
+test-suite tasty-hunit-testsuite
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Import
+      SocketUtils
+      Util
+      Paths_consul_haskell
+  hs-source-dirs:
+      tests
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
+  build-depends:
+      HUnit >=1.2
+    , base >=4.7 && <5
+    , bytestring
+    , consul-haskell
+    , http-client
+    , network
+    , random
+    , retry
+    , tasty
+    , tasty-hunit
+    , text
+    , transformers
+    , typed-process
+    , unliftio
+    , uuid
+  default-language: Haskell2010

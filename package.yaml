@@ -1,0 +1,74 @@
+name:                consul-haskell
+version:             0.6.3
+github:              "alphaHeavy/consul-haskell"
+license:             BSD3
+license-file:        LICENSE
+author:              "Steve Severance"
+maintainer:          "ketzacoatl@protonmail.com"
+homepage:            https://github.com/alphaHeavy/consul-haskell
+bug-reports:         https://github.com/alphaHeavy/consul-haskell/issues
+
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+category:            Network
+synopsis:            A consul client for Haskell
+description:
+  A consul client for Haskell
+  .
+  Requires consul 1.0 or later. Tested with the latest consul release in each of the release series from 1.3 to 1.9, as well as 1.10.0-alpha.
+  For more info, please see the README on GitHub at <https://github.com/alphaHeavy/consul-haskell#readme>.
+
+
+library:
+  source-dirs: src
+  dependencies:
+    - aeson
+    - base >= 4.10 && < 5
+    - base64-bytestring
+    - bytestring
+    - connection
+    - either
+    - exceptions
+    - http-client
+    - http-client-tls
+    - http-types
+    - network
+    - retry
+    - stm
+    - text
+    - transformers
+    - unliftio >= 0.2.4
+    - unordered-containers
+    - vector
+  ghc-options:
+    -Wall
+
+
+tests:
+  tasty-hunit-testsuite:
+    main: Main.hs
+    source-dirs: tests
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -Wall
+    dependencies:
+      - base >= 4.7 && < 5
+      - bytestring
+      - consul-haskell
+      - http-client
+      - network
+      - random
+      - retry
+      - tasty
+      - tasty-hunit
+      - text
+      - transformers
+      - typed-process
+      - unliftio
+      - uuid
+      - HUnit >= 1.2
