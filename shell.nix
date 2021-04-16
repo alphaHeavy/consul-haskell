@@ -4,11 +4,11 @@ let
   # see https://github.com/mpickering/old-ghc-nix/issues/8.
   pkgs = import (builtins.fetchTarball {
     # Descriptive name to make the store path easier to identify
-    name = "nixos-20.03-2020-12-08";
+    name = "nixos-20.09-2021-04-13";
     # Current commit from https://github.com/NixOS/nixpkgs/tree/nixos-20.03
-    url = "https://github.com/nixos/nixpkgs/archive/030e2ce817c8e83824fb897843ff70a15c131b96.tar.gz";
+    url = "https://github.com/nixos/nixpkgs/archive/dec334fa196a4aeedb1b60d8f7d61aa00d327499.tar.gz";
     # Hash obtained using `nix-prefetch-url --unpack <url>`
-    sha256 = "110kgp4x5bx44rgw55ngyhayr4s19xwy19n6qw9g01hvhdisilwf";
+    sha256 = "1sm1p2qliz11qw6va01knm0rikhpq2h4c70ci98vi4q26y4q9z72";
   }) {};
 
   # Needs NUR from https://github.com/nix-community/NUR
