@@ -27,6 +27,7 @@ let
     name = "consul-haskell";
     includeDirs = [
       ./src
+      ./test
       ./tests
     ];
     includeFiles = [
@@ -34,6 +35,7 @@ let
       ./Setup.hs
       ./LICENSE
       ./README.md
+      ./CHANGELOG.md
     ];
     pathComponentExcludes = [ "build" "gen" ];
   };
