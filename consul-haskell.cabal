@@ -84,7 +84,6 @@ test-suite sydtest-testsuite
       Consul.SessionSpec
       Import
       SocketUtils
-      Spec
       Util
       Paths_consul_haskell
   hs-source-dirs:
