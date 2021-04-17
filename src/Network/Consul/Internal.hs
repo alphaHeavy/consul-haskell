@@ -2,10 +2,14 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- | TODO: Document
+{- |
+The contents of this module are internals used in the library.
+
+Feel free to contribute via the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
+-}
 module Network.Consul.Internal
   ( hostWithScheme
-  , createRequest 
+  , createRequest
   , decodeAndStrip
   , emptyHttpManager
   , parseTtl
@@ -23,21 +27,32 @@ import Network.HTTP.Client
 import Network.HTTP.Types ()
 import Network.Socket (PortNumber)
 
--- | TODO: Document
-hostWithScheme :: ConsulClient -> ConsulHost
+{- |
+Produces a formatted `ConsulHost` using values from the `ConsulClient` provided.
+
+@since 0.0.0
+-}
+hostWithScheme :: ConsulClient -- ^
+               -> ConsulHost -- ^ http://$hostname or https://$hostname, depends on `ccWithTls`.
 hostWithScheme ConsulClient{..} = scheme `T.append` ccHostname
   where scheme = if ccWithTls then "https://" else "http://"
 
 
--- TODO: document
-createRequest :: MonadIO m => ConsulHost
-                           -> PortNumber
-                           -> ApiEndpoint
-                           -> Maybe ConsulQuery
-                           -> Maybe ConsulRequestBody
-                           -> WaitFlag
-                           -> Maybe Datacenter
-                           -> m Request
+{- |
+Format an Http `Request` we can send to Consul.
+
+TODO: split up and clean up.
+
+@since 0.0.0
+-}
+createRequest :: MonadIO m => ConsulHost -- ^
+                           -> PortNumber -- ^
+                           -> ApiEndpoint -- ^
+                           -> Maybe ConsulQuery -- ^
+                           -> Maybe ConsulRequestBody -- ^
+                           -> WaitFlag -- ^
+                           -> Maybe Datacenter -- ^
+                           -> m Request -- ^
 createRequest consulHostWithScheme
               portNumber
               endpoint
@@ -56,19 +71,32 @@ createRequest consulHostWithScheme
     prefixAnd = if isJust query && isJust dc then "&" else ""
     indef req = if wait == True then req{responseTimeout = responseTimeoutNone} else req
 
-{- Key Value Store -}
+{- |
+Run `T.unpack`, `T.strip` and `Text.Encoding.decoodeUtf8` on a `ByteString` (to get a `String` of course).
 
--- | TODO: Document
-decodeAndStrip :: ByteString -> String
+@since 0.0.0
+-}
+decodeAndStrip :: ByteString -- ^
+               -> String -- ^
 decodeAndStrip = T.unpack . T.strip . TE.decodeUtf8
 
 
--- | TODO: Document
--- a convenience utility for clarity
+{- |
+A convenience utility for clarity.
+
+@since 0.0.0
+-}
 emptyHttpManager :: Maybe Manager
 emptyHttpManager = Nothing
 
 
--- | TODO: Document
-parseTtl :: Integral t => Text -> t
+{- |
+Parse a TTL value.
+
+TODO: review/update?
+
+@since 0.0.0
+-}
+parseTtl :: Integral t => Text -- ^
+         -> t -- ^
 parseTtl ttl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x

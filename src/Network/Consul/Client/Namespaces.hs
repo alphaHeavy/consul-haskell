@@ -3,8 +3,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | TODO: document module
--- https://www.consul.io/api-docs/namespaces
+
+{- | The functions in this module correspond to
+the [Consul Namespaces API](https://www.consul.io/api/namespaces).
+
+This module is a WIP, feel free to contribute via
+the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
+
+__Missing Functions__
+
+* `createNamespace`
+* `deleteNamespace`
+* `getNamespace`
+* `listNamespaces`
+* `updateNamespace`
+-}
 module Network.Consul.Client.Namespaces
   ( createNamespace
   , deleteNamespace
@@ -15,23 +28,53 @@ module Network.Consul.Client.Namespaces
 
 import Import
 
--- | TODO: Document
+
+{- | Create a new Namespace.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 createNamespace :: MonadIO m => ConsulClient -> SessionRequest -> m ()
 createNamespace = undefined
 
--- | TODO: Document
+
+{- | Delete a Namespace.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 deleteNamespace :: MonadIO m => ConsulClient -> SessionRequest -> m ()
 deleteNamespace = undefined
 
--- | TODO: Document
+
+{- | Get an existing Namespace.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 getNamespace :: MonadIO m => ConsulClient -> SessionRequest -> m ()
 getNamespace = undefined
 
--- | TODO: Document
+
+{- | List all Namespaces.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 listNamespaces :: MonadIO m => ConsulClient -> SessionRequest -> m ()
 listNamespaces = undefined
 
--- | TODO: Document
+
+{- | Update an existing Namespace.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 updateNamespace :: MonadIO m => ConsulClient -> SessionRequest -> m ()
 updateNamespace = undefined
  

@@ -2,7 +2,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
+{- |
+Internal data type and instance definitions for interacting with Consul's API.
+
+Please feel free to contribute via the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
+-}
 module Network.Consul.Types (
+  -- * Consul API Response Data Types
   Check(..),
   Config(..),
   Consistency(..),
@@ -26,16 +33,19 @@ module Network.Consul.Types (
   SessionInfo(..),
   SessionRequest(..),
   Sequencer(..),
+  -- * Internal Data Types
   ConsulHost,
   ApiEndpoint,
   ConsulQuery,
   ConsulRequestBody,
   WaitFlag,
+  -- * Utility Data Types
   noQuery,
   noRequestBody,
   waitTrue,
   waitFalse
 ) where
+
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types
@@ -49,24 +59,77 @@ import Data.Word
 import Network.HTTP.Client (Manager)
 import Network.Socket
 
+
+{- | Represents a Consul Client.
+
+@since 0.0.0.0 
+-}
 data ConsulClient = ConsulClient
-  { ccManager :: Manager
-  , ccHostname :: Text
-  , ccPort :: PortNumber
-  , ccWithTls :: Bool
-  , ccDatacenter :: Maybe Datacenter
+  { ccManager :: Manager -- ^ Http Manager
+  , ccHostname :: Text  -- ^ Host/Ip to Consul agent
+  , ccPort :: PortNumber -- ^ Tcp Port to Http interface on Consul agent
+  , ccWithTls :: Bool -- ^ Do we enable Tls on the connection?
+  , ccDatacenter :: Maybe Datacenter -- ^ Is there a datacenter we scope our requests to?
   }
 
+
+{- | Represents a Consul Datacenter.
+
+@since 0.1.0
+-}
 data Datacenter = Datacenter Text deriving (Eq, Ord, Show)
 
-data Consistency = Consistent | Default | Stale deriving (Bounded, Enum, Eq, Ord, Show)
 
-data HealthCheckStatus = Critical | Passing | Unknown | Warning deriving (Bounded, Enum, Eq, Ord, Show)
+{- | Represents Consul's documented Consistency Modes.
 
-data SessionBehavior = Release | Delete deriving (Bounded, Enum, Eq, Ord, Show)
+See [Consul's doocumentation](https://www.consul.io/api-docs/features/consistency) for more info.
 
-data HealthCheck = Script Text Text | Ttl Text | Http Text deriving (Eq, Ord, Show)
+@since 0.1.0
+-}
+data Consistency
+  = Consistent -- ^ This mode is strongly consistent without caveats.
+  | Default -- ^ If not specified, the default is strongly consistent in almost all cases.
+  | Stale -- ^ This mode allows any server to service the read, even if it is not the active leader.
+  deriving (Bounded, Enum, Eq, Ord, Show)
 
+
+{- | Represents Consul's Health Check Status
+
+@since 0.1.0
+-}
+data HealthCheckStatus
+  = Critical -- ^ Health check is in a critical state.
+  | Passing -- ^ Health check is passing.
+  | Unknown -- ^ Status of health check is unknown.
+  | Warning -- ^ Health check is warning (not passing, but not critical yet either).
+  deriving (Bounded, Enum, Eq, Ord, Show)
+
+
+{- | Represents Consul's possible Session Behavior
+
+@since 0.0.0.0
+-}
+data SessionBehavior
+  = Release -- ^ Causes any locks that are held to be released.
+  | Delete -- ^ Causes any locks that are held to be deleted.
+  deriving (Bounded, Enum, Eq, Ord, Show)
+
+
+{- | Represents Consul's Health Check
+
+@since 0.0.0.0
+-}
+data HealthCheck
+   = Script Text Text -- ^ TODO
+   | Ttl Text -- ^ TODO
+   | Http Text -- ^ TODO
+   deriving (Eq, Ord, Show)
+
+
+{- | Represents a Consul Key retrieved from the KV store.
+
+@since 0.0.0.0
+-}
 data KeyValue = KeyValue {
   kvCreateIndex :: Word64,
   kvLockIndex :: Word64,
@@ -77,6 +140,11 @@ data KeyValue = KeyValue {
   kvKey :: Text
 } deriving (Eq, Ord, Show)
 
+
+{- | Represents a KV being written (PUT) to the Consul KV.
+
+@since 0.1.0
+-}
 data KeyValuePut = KeyValuePut {
   kvpKey :: Text,
   kvpValue :: ByteString,
@@ -84,11 +152,21 @@ data KeyValuePut = KeyValuePut {
   kvpFlags :: Maybe Word64
 } deriving (Eq, Ord, Show)
 
+
+{- | Represents a Consul Session
+
+@since 0.1.0
+-}
 data Session = Session {
   sId :: Text,
   sCreateIndex :: Maybe Word64
 } deriving (Eq, Ord, Show)
 
+
+{- | Represents the session info/data associated with a session.
+
+@since 0.0.0.0
+-}
 data SessionInfo = SessionInfo {
   siId :: Text, -- TODO: switch to uuid
   siName :: Maybe Text,
@@ -103,8 +181,19 @@ data SessionInfo = SessionInfo {
   siModifyIndex :: Word64
 } deriving (Eq, Ord, Show)
 
-newtype SessionInfoList = SessionInfoList [SessionInfo]
 
+{- |
+
+@since 0.0.0.0
+-}
+newtype SessionInfoList
+  = SessionInfoList [SessionInfo] -- ^ List of `SessionInfo` objects.
+
+
+{- |
+
+@since 0.0.0.0
+-}
 data SessionRequest = SessionRequest {
   srLockDelay :: Maybe Text,
   srName :: Maybe Text,
@@ -114,12 +203,22 @@ data SessionRequest = SessionRequest {
   srTtl :: Maybe Text
 } deriving (Eq, Ord, Show)
 
+
+{- |
+
+@since 0.0.0.0
+-}
 data Sequencer = Sequencer{
   sKey :: Text,
   sLockIndex :: Word64,
   sSession :: Session
 } deriving (Eq, Ord, Show)
 
+
+{- |
+
+@since 0.1.0
+-}
 data RegisterRequest = RegisterRequest {
   rrDatacenter :: Maybe Datacenter,
   rrNode :: Text,
@@ -128,6 +227,11 @@ data RegisterRequest = RegisterRequest {
   rrCheck :: Maybe Check
 } deriving (Eq, Ord, Show)
 
+
+{- |
+
+@since 0.1.0
+-}
 data Service = Service {
   seId :: Text,
   seService :: Text,
@@ -136,7 +240,12 @@ data Service = Service {
   sePort :: Maybe Int
 } deriving (Eq, Ord, Show)
 
-data ServiceResult = ServiceResult{
+
+{-
+
+@since 0.0.0.0
+-}
+data ServiceResult = ServiceResult {
   srrNode :: Text,
   srrAddress :: Text,
   srrServiceId :: Text,
@@ -146,6 +255,11 @@ data ServiceResult = ServiceResult{
   srrServicePort :: Maybe Int
 } deriving (Eq, Ord, Show)
 
+
+{- |
+
+@since 0.1.0
+-}
 data Check = Check {
   cNode :: Text,
   cCheckId :: Text,
@@ -157,12 +271,21 @@ data Check = Check {
   cServiceName :: Maybe Text
 } deriving (Eq, Ord, Show)
 
+
+{- |
+
+@since 0.2.0
+-}
 data Node = Node {
   nNode :: Text,
   nAddress :: Text
 } deriving (Eq, Ord, Show)
 
-{- Agent -}
+
+{-| Agent 
+
+@since 0.0.0.0
+-}
 data RegisterHealthCheck = RegisterHealthCheck {
   rhcId :: Text,
   rhcName :: Text,
@@ -172,6 +295,11 @@ data RegisterHealthCheck = RegisterHealthCheck {
   rhcTtl :: Maybe Text
 } deriving (Eq, Ord, Show)
 
+
+{- |
+
+@since 0.0.0.0
+-}
 data RegisterService = RegisterService {
   rsId :: Maybe Text,
   rsName :: Text,
@@ -180,10 +308,20 @@ data RegisterService = RegisterService {
   rsCheck :: Maybe HealthCheck
 } deriving (Eq, Ord, Show)
 
+
+{- |
+
+@since 0.0.0.0
+-}
 data Self = Self {
   sMember :: Member
 } deriving (Eq, Show)
 
+
+{- |
+
+@since 0.0.0.0
+-}
 data Config = Config {
   cBootstrap :: Bool,
   cServer :: Bool,
@@ -192,6 +330,11 @@ data Config = Config {
   cClientAddr :: Text
 } deriving (Eq, Ord, Show)
 
+
+{- |
+
+@since 0.0.0.0
+-}
 data Member = Member {
   mName :: Text,
   mAddress :: Text,
@@ -206,7 +349,13 @@ data Member = Member {
   mDelegateCur :: Int
 } deriving (Eq, Show)
 
-{- Health -}
+
+{- |
+
+Health
+
+@since 0.0.0.0
+-}
 data Health = Health {
   hNode :: Node,
   hService :: Service,
@@ -214,19 +363,37 @@ data Health = Health {
 } deriving (Eq, Ord, Show)
 
 
-{- JSON Instances -}
+{- | JSON Instances
+
+@since 0.0.0.0
+-}
 instance FromJSON Self where
   parseJSON (Object v) = Self <$> v .: "Member"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Config where
   parseJSON (Object v) = Config <$> v .: "Bootstrap" <*> v .: "Server" <*> v .: "Datacenter" <*> v .: "DataDir" <*> v .: "ClientAddr"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Member where
   parseJSON (Object v) = Member <$> v .: "Name" <*> v .: "Addr" <*> v .: "Port" <*> v .: "Tags" <*> v .: "Status" <*> v .: "ProtocolMin" <*> v .: "ProtocolMax" <*> v .: "ProtocolCur" <*> v .: "DelegateMin" <*> v .: "DelegateMax" <*> v .: "DelegateCur"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON HealthCheckStatus where
   parseJSON (String "critical") = pure Critical
   parseJSON (String "passing") = pure Passing
@@ -234,6 +401,11 @@ instance FromJSON HealthCheckStatus where
   parseJSON (String "warning") = pure Warning
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Network.Consul.Types.KeyValue where
   parseJSON (Object v) =
     Network.Consul.Types.KeyValue
@@ -246,10 +418,20 @@ instance FromJSON Network.Consul.Types.KeyValue where
       <*> v .: "Key"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Datacenter where
   parseJSON (String val) = pure $ Datacenter val
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Check where
   parseJSON (Object x) =
     Check
@@ -263,6 +445,11 @@ instance FromJSON Check where
       <*> x .:? "ServiceName"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Service where
   parseJSON (Object x) =
     Service
@@ -273,6 +460,11 @@ instance FromJSON Service where
       <*> x .:? "Port"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Node where
   parseJSON (Object x) =
     Node
@@ -280,6 +472,11 @@ instance FromJSON Node where
       <*> x .: "Address"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Health where
   parseJSON (Object x) =
     Health
@@ -288,6 +485,11 @@ instance FromJSON Health where
       <*> x .: "Checks"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON Session where
   parseJSON (Object x) =
     Session
@@ -295,12 +497,22 @@ instance FromJSON Session where
       <*> pure Nothing
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON SessionInfoList where
   parseJSON (Array x) =
     SessionInfoList
       <$> traverse parseJSON (toList x)
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON SessionInfo where
   parseJSON (Object x) =
     SessionInfo
@@ -317,36 +529,81 @@ instance FromJSON SessionInfo where
       <*> x .:  "ModifyIndex"
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON SessionBehavior where
   parseJSON (String "release") = pure Release
   parseJSON (String "delete") = pure Delete
   parseJSON _ = mzero
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance ToJSON SessionBehavior where
   toJSON Release = String "release"
   toJSON Delete = String "delete"
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance ToJSON RegisterHealthCheck where
   toJSON (RegisterHealthCheck i name notes script interval ttl) = object ["id" .= i, "name" .= name, "notes" .= notes, "script" .= script, "interval" .= interval, "ttl" .= ttl]
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance ToJSON RegisterService where
   toJSON (RegisterService i name tags port check) = object ["ID" .= i, "Name" .= name, "tags" .= tags, "port" .= port, "Check" .= check]
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance ToJSON HealthCheck where
   toJSON (Ttl x) = object ["TTL" .= x]
   toJSON (Http x) = object ["HTTP" .= x]
   toJSON (Script x y) = object ["Script" .= x, "Interval" .= y]
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance ToJSON SessionRequest where
   toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance ToJSON ServiceResult where
   toJSON (ServiceResult node addr sid sName sTags sAddress sPort) = object["Node" .= node, "Address" .= addr, "ServiceID" .= sid, "ServiceName" .= sName, "ServiceTags" .= sTags, "ServiceAddress" .= sAddress, "ServicePort" .= sPort]
 
+
+{- |
+
+@since 0.0.0.0
+-}
 instance FromJSON ServiceResult where
   parseJSON (Object x) = ServiceResult <$> x .: "Node" <*> x .: "Address" <*> x .: "ServiceID" <*> x .: "ServiceName" <*> x .: "ServiceTags" <*> x .:? "ServiceAddress" <*> x .:? "ServicePort"
   parseJSON _ = mzero
 
+
+{- | TODO: Review and doocument
+
+@since 0.0.0.0
+-}
 foo :: Maybe Value -> Parser (Maybe ByteString)
 foo (Just (String x)) =
   case B64.decode $ TE.encodeUtf8 x of
@@ -354,25 +611,70 @@ foo (Just (String x)) =
     Right y -> return $ Just y
 foo (Just _) = return Nothing
 foo Nothing = return Nothing
--- TODO: where to put these?
+
+
+{- | Represents the Hostname/IP for the Consul Server to interact with.
+
+@since 0.0.0.0
+-}
 type ConsulHost = Text
+
+
+{- | Represents the Url path for the API the request is interacting with.
+
+@since 0.0.0.0
+-}
 type ApiEndpoint = Text
+
+
+{- | Represents a query to include in our Consul Request.
+
+@since 0.0.0.0
+-}
 type ConsulQuery = Text
+
+
+{- | Represents the body of the request sent to Consul.
+
+@since 0.0.0.0
+-}
 type ConsulRequestBody = ByteString
+
+
+{- | Whether or not wait is enabled on the Consul request.
+
+@since 0.0.0.0
+-}
 type WaitFlag = Bool
 
--- | TODO: Document
+
+{- | Wait is enabled.
+
+@since 0.0.0.0
+-}
 waitTrue :: Bool
 waitTrue = True
 
--- | TODO: Document
+
+{- | Wait is disabled.
+
+@since 0.0.0.0
+-}
 waitFalse :: Bool
 waitFalse = False
 
--- | TODO: Document
+
+{- | Represents the case when we have no query to include in the Consul request.
+
+@since 0.0.0.0
+-}
 noQuery :: Maybe a
 noQuery = Nothing
 
--- | TODO: Document
+
+{- | Represents the case when we have no data payload (body) to include in the Consul request.
+
+@since 0.0.0.0
+-}
 noRequestBody :: Maybe a
 noRequestBody = Nothing

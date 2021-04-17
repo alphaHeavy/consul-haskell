@@ -3,7 +3,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | TODO: document module
+
+{- | __KVStore Client API__
+
+The functions in this module correspond to
+the [Consul KV API](https://www.consul.io/api/kv).
+
+__Missing Functions__
+
+* TODO: review.
+-}
 module Network.Consul.Client.KVStore
   ( deleteKey
   , getKey
@@ -19,8 +28,16 @@ import qualified Data.ByteString as B (concat)
 import qualified Data.ByteString.Lazy as BL (fromStrict)
 import qualified Data.Text as T (concat, empty, pack, intercalate)
  
--- | TODO: Document!
-deleteKey :: MonadIO m => ConsulClient -> Text -> Bool -> m Bool
+{- | Delete Key
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+deleteKey :: MonadIO m => ConsulClient -- ^
+          -> Text -- ^
+          -> Bool -- ^
+          -> m Bool -- ^
 deleteKey _client@ConsulClient{..} key recurse = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
@@ -40,8 +57,18 @@ deleteKey _client@ConsulClient{..} key recurse = do
       "false" -> return False
       _ -> return False
 
--- | TODO: Document!
-getKey :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m (Maybe KeyValue)
+
+{- |
+TODO: Document
+
+@since 0.1.0
+-}
+getKey
+  :: MonadIO m => ConsulClient -- ^
+  -> Text -- ^
+  -> Maybe Word64 -- ^
+  -> Maybe Consistency -- ^
+  -> m (Maybe KeyValue) -- ^
 getKey _client@ConsulClient{..} key index consistency = do
   let hostnameWithScheme = hostWithScheme _client
   request <- createRequest hostnameWithScheme
@@ -65,8 +92,18 @@ getKey _client@ConsulClient{..} key index consistency = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
--- | TODO: Document!
-getKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m [KeyValue]
+{- | Get Keys
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+getKeys
+  :: MonadIO m => ConsulClient -- ^
+  -> Text -- ^
+  -> Maybe Word64 -- ^
+  -> Maybe Consistency -- ^
+  -> m [KeyValue] -- ^
 getKeys _client@ConsulClient{..} key index consistency = do
   let hostnameWithScheme = hostWithScheme _client
   request <- createRequest hostnameWithScheme
@@ -90,8 +127,18 @@ getKeys _client@ConsulClient{..} key index consistency = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
--- | TODO: Document!
-listKeys :: MonadIO m => ConsulClient -> Text -> Maybe Word64 -> Maybe Consistency -> m [Text]
+{- | List Keys.
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+listKeys
+  :: MonadIO m => ConsulClient -- ^
+  -> Text -- ^
+  -> Maybe Word64 -- ^
+  -> Maybe Consistency -- ^
+  -> m [Text] -- ^
 listKeys _client@ConsulClient{..} prefix index consistency = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
@@ -115,8 +162,15 @@ listKeys _client@ConsulClient{..} prefix index consistency = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
--- | TODO: Document!
-putKey :: MonadIO m => ConsulClient -> KeyValuePut -> m Bool
+{- |
+TODO: Document
+
+@since 0.1.0
+-}
+putKey
+  :: MonadIO m => ConsulClient -- ^
+  -> KeyValuePut -- ^
+  -> m Bool -- ^
 putKey _client@ConsulClient{..} putRequest = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
@@ -141,8 +195,17 @@ putKey _client@ConsulClient{..} putRequest = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
--- | TODO: Document!
-putKeyAcquireLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> m Bool
+{- | Put Key Acquire Lock
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+putKeyAcquireLock
+  :: MonadIO m => ConsulClient -- ^
+  -> KeyValuePut -- ^
+  -> Session -- ^
+  -> m Bool -- ^
 putKeyAcquireLock _client@ConsulClient{..} request (Session session _) = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
@@ -168,8 +231,17 @@ putKeyAcquireLock _client@ConsulClient{..} request (Session session _) = do
     fquery = if query /= T.empty then Just query else Nothing
 
 
--- | TODO: Document!
-putKeyReleaseLock :: MonadIO m => ConsulClient -> KeyValuePut -> Session -> m Bool
+{- | Put Key Release Lock
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+putKeyReleaseLock
+  :: MonadIO m => ConsulClient -- ^
+  -> KeyValuePut -- ^
+  -> Session -- ^
+  -> m Bool -- ^
 putKeyReleaseLock _client@ConsulClient{..} request (Session session _) = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
