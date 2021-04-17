@@ -3,7 +3,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | TODO: document module
+{- | The functions in this module correspond to
+the [Consul Catalog API](https://www.consul.io/api/catalog).
+
+This module is a WIP, feel free to contribute via
+the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
+
+__Missing Functions__
+
+* `listServices` (synonym for `getServices`)
+* `listNodes`
+* `listDatacenters` (synonym for `getDatacenters`)
+* `listNodesForService`
+* `listNodesForConnectService`
+* `getNodeServiceMap`
+* `listNodeServices`
+* `listGatewayServices`
+-}
 module Network.Consul.Client.Catalog
   ( deregisterService
   , getDatacenters
@@ -19,8 +35,16 @@ import qualified Data.Text as T (concat, pack, unpack)
 import qualified Data.Vector as V (elem)
 import qualified Data.HashMap.Strict as H (toList)
 
--- | TODO: Document
-deregisterService :: MonadIO m => ConsulClient -> Text -> m ()
+
+{- | 
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+deregisterService :: MonadIO m => ConsulClient -- ^
+                  -> Text -- ^ Name of service to deregister.
+                  -> m () -- ^
 deregisterService client service = do
   let portNumber = ccPort client
       manager = ccManager client
@@ -38,8 +62,14 @@ deregisterService client service = do
     return ()
 
 
--- | TODO: document module
-getDatacenters :: MonadIO m => ConsulClient -> m [Datacenter]
+{- |
+TODO: Document
+
+@since 0.1.0
+-}
+getDatacenters
+  :: MonadIO m => ConsulClient -- ^
+  -> m [Datacenter] -- ^
 getDatacenters client@ConsulClient{..} = liftIO $ do
   let hostnameWithScheme = hostWithScheme client
   initReq <- parseUrlThrow $ T.unpack $ T.concat [hostnameWithScheme, ":", T.pack $ show ccPort ,"/v1/catalog/datacenters/"]
@@ -52,8 +82,17 @@ getDatacenters client@ConsulClient{..} = liftIO $ do
       Nothing -> return []
 
 
--- | TODO: Document
-getService :: MonadIO m => ConsulClient -> Text -> Maybe Text -> m (Maybe [ServiceResult])
+{- |
+
+TODO: Document
+
+@since 0.0.0.0
+-}
+getService
+  :: MonadIO m => ConsulClient -- ^
+  -> Text -- ^
+  -> Maybe Text -- ^
+  -> m (Maybe [ServiceResult]) -- ^
 getService _client@ConsulClient{..} name tag = do
   let hostnameWithScheme = hostWithScheme _client
   req <- createRequest hostnameWithScheme
@@ -69,8 +108,16 @@ getService _client@ConsulClient{..} name tag = do
     return $ decode $ BL.fromStrict $ B.concat bodyParts
 
 
--- | TODO: Document
-getServices :: MonadIO m => ConsulClient -> Maybe Text -> m [Text]
+{- |
+
+TODO: Document
+
+@since 0.0.0.0
+-}
+getServices
+  :: MonadIO m => ConsulClient -- ^
+  -> Maybe Text -- ^
+  -> m [Text] -- ^
 getServices _client@ConsulClient{..} tag = do
     req <- createRequest (hostWithScheme _client)
                          ccPort
@@ -90,8 +137,16 @@ getServices _client@ConsulClient{..} tag = do
     filterTags Nothing                = map fst
 
 
--- | TODO: Document
-registerService :: MonadIO m => ConsulClient -> RegisterService -> m Bool
+{- |
+
+TODO: Document
+
+@since 0.0.0.0
+-}
+registerService
+  :: MonadIO m => ConsulClient -- ^
+  -> RegisterService -- ^
+  -> m Bool -- ^
 registerService client request = do
   let portNumber = ccPort client
       manager = ccManager client

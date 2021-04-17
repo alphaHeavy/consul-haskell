@@ -3,6 +3,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{- | Consul Client Library
+
+Documentation is a WIP, thank you for understanding.
+
+-}
 module Network.Consul (
   -- Catalog
     deregisterService

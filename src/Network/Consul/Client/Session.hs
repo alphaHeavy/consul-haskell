@@ -3,7 +3,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | TODO: document module
+
+{- | The functions in this module correspond to
+the [Consul Session API](https://www.consul.io/api/session).
+
+Feel free to contribute via the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
+-}
 module Network.Consul.Client.Session
   ( createSession
   , destroySession
@@ -17,8 +22,16 @@ import qualified Data.ByteString as B (concat)
 import qualified Data.ByteString.Lazy as BL (toStrict, fromStrict)
 import qualified Data.Text as T (concat)
 
--- | TODO: Document
-createSession :: MonadIO m => ConsulClient -> SessionRequest -> m (Maybe Session)
+
+{- | Create a new Session.
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+createSession :: MonadIO m => ConsulClient -- ^
+              -> SessionRequest -- ^
+              -> m (Maybe Session) -- ^
 createSession client@ConsulClient{..} request = do
   let hostnameWithScheme = hostWithScheme client
   initReq <- createRequest hostnameWithScheme
@@ -36,8 +49,15 @@ createSession client@ConsulClient{..} request = do
       _ -> return Nothing
 
 
--- | TODO: Document
-destroySession :: MonadIO m => ConsulClient -> Session ->  m ()
+{- | Destroy a Session.
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+destroySession :: MonadIO m => ConsulClient -- ^
+                 -> Session -- ^
+                 ->  m () -- ^
 destroySession client@ConsulClient{..} (Session session _) = do
   let hostnameWithScheme = hostWithScheme client
   initReq <- createRequest hostnameWithScheme
@@ -51,8 +71,15 @@ destroySession client@ConsulClient{..} (Session session _) = do
   liftIO $ withResponse req ccManager $ \ _response -> return ()
 
 
--- | TODO: Document
-renewSession :: MonadIO m => ConsulClient -> Session ->  m Bool
+{- | Renew an existing Session.
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+renewSession :: MonadIO m => ConsulClient -- ^
+             -> Session -- ^
+             ->  m Bool -- ^
 renewSession client@ConsulClient{..} (Session session _) =  do
   let hostnameWithScheme = hostWithScheme client
   initReq <- createRequest hostnameWithScheme
@@ -69,8 +96,15 @@ renewSession client@ConsulClient{..} (Session session _) =  do
       _ -> return False
 
 
--- | TODO: Document
-getSessionInfo :: MonadIO m => ConsulClient -> Session ->  m (Maybe [SessionInfo])
+{- | Get Info on an existing Session.
+
+TODO: Document.
+
+@since 0.0.0.0
+-}
+getSessionInfo :: MonadIO m => ConsulClient -- ^
+               -> Session -- ^
+               ->  m (Maybe [SessionInfo]) -- ^
 getSessionInfo client@ConsulClient{..} (Session sessionId _) = do
   let hostnameWithScheme = hostWithScheme client
   req <- createRequest hostnameWithScheme
@@ -88,9 +122,21 @@ getSessionInfo client@ConsulClient{..} (Session sessionId _) = do
       _ -> return Nothing
 
 
--- | TODO: Document
--- TODO: use `name` in function?
-withSession :: forall m a. (MonadMask m, MonadUnliftIO m) => ConsulClient -> Maybe Text -> Int -> Session -> (Session -> m a) -> m a -> m a
+
+{- | Do some action with a Consul Session as a wrapper.
+
+TODO: Document.
+TODO: use `name` in function?
+
+@since 0.0.0.0
+-}
+withSession :: forall m a. (MonadMask m, MonadUnliftIO m) => ConsulClient -- ^
+            -> Maybe Text -- ^
+            -> Int -- ^
+            -> Session -- ^
+            -> (Session -> m a) -- ^
+            -> m a -- ^
+            -> m a -- ^
 withSession client@ConsulClient{..} _ delay session action lostAction = (do
   withAsync (action session) $ \ mainAsync -> withAsync extendSession $ \ extendAsync -> do
     result :: a <- return . snd =<< waitAnyCancel [mainAsync,extendAsync]

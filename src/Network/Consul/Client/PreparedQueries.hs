@@ -3,8 +3,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | TODO: document module
--- https://www.consul.io/api-docs/query
+{- | The functions in this module correspond to
+the [Consul Prepared Queries API](https://www.consul.io/api/query).
+
+__Missing Functions__
+
+* `createQuery`
+* `deleteQuery`
+* `executeQuery`
+* `explainQuery`
+* `getQuery`
+* `listQueries`
+* `updateQuery`
+
+Feel free to contribute via the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
+-}
 module Network.Consul.Client.PreparedQueries
   ( createQuery
   , deleteQuery
@@ -17,30 +30,72 @@ module Network.Consul.Client.PreparedQueries
 
 import Import
 
--- | TODO: Document
+{- | Create a new Prepared Query.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 createQuery :: MonadIO m => ConsulClient -> SessionRequest -> m ()
 createQuery = undefined
 
--- | TODO: Document
+
+{- | Delete a Prepared Query.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 deleteQuery :: MonadIO m => ConsulClient -> SessionRequest -> m ()
 deleteQuery = undefined
 
--- | TODO: Document
+
+
+{- | Execute a Prepared Query (return the results from the Query).
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 executeQuery :: MonadIO m => ConsulClient -> m ()
 executeQuery = undefined
 
--- | TODO: Document
+
+{- | Explain a Prepared Query.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 explainQuery :: MonadIO m => ConsulClient -> m ()
 explainQuery = undefined
 
--- | TODO: Document
+
+{- | Get an existing Prepared Query.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 getQuery :: MonadIO m => ConsulClient -> m ()
 getQuery = undefined
 
--- | TODO: Document
+
+{- | List existing Prepared Queries.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 listQueries :: MonadIO m => ConsulClient -> m ()
 listQueries = undefined
 
--- | TODO: Document
+
+{- | Update a Prepared Query.
+
+Undefined, please feel free to contribute a solution for this missing function.
+
+@since 0.0.0.0
+-}
 updateQuery :: MonadIO m => ConsulClient -> m ()
 updateQuery = undefined

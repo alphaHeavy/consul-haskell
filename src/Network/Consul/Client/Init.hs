@@ -3,7 +3,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | TODO: document module
+{- | __Consul Client Initialization__
+
+The functions in this module are used to initialize the `ConsulClient`.
+
+This documentation is a WIP, feel free to contribute via
+the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
+-}
 module Network.Consul.Client.Init
   ( initializeConsulClient
   , initializeTlsConsulClient
@@ -11,8 +17,17 @@ module Network.Consul.Client.Init
 
 import Import
 
+
+{- | Initialize non-Tls Client
+
+@since 0.0.0.0
+-}
 -- | TODO: Document
-initializeConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
+initializeConsulClient
+  :: MonadIO m => Text -- ^
+  -> PortNumber -- ^
+  -> Maybe Manager -- ^
+  -> m ConsulClient -- ^
 initializeConsulClient hostname port man = do
   manager <- liftIO $ case man of
                         Just x -> return x
@@ -21,8 +36,17 @@ initializeConsulClient hostname port man = do
                                                  -- we omit a Datacenter here for brevity
                                                  -- it's still allowed via record updates
 
+
+{- | Initialize Tls Client
+
+@since 0.0.0.0
+-}
 -- | TODO: Document
-initializeTlsConsulClient :: MonadIO m => Text -> PortNumber -> Maybe Manager -> m ConsulClient
+initializeTlsConsulClient
+  :: MonadIO m => Text -- ^
+  -> PortNumber -- ^
+  -> Maybe Manager -- ^
+  -> m ConsulClient -- ^
 initializeTlsConsulClient hostname port man = do
     manager <- liftIO $ case man of
                         Just x -> return x

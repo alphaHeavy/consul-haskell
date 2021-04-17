@@ -3,8 +3,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | TODO: document module
--- https://www.consul.io/api-docs/coordinate
+{- | The functions in this module correspond to
+the [Consul Coordinate API](https://www.consul.io/api/coordinate).
+
+This module is a WIP, please feel free to contribute via the repo on GitHub.
+
+__Missing Functions__
+
+* `getNodeLANCoordinates`
+* `listNodeLANCoordinates`
+* `listServerWANCoordinates`
+* `updateNodeLANCoordinates`
+-}
 module Network.Consul.Client.Coordinates
   ( getNodeLANCoordinates
   , listNodeLANCoordinates
