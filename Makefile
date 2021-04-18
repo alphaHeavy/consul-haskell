@@ -19,6 +19,8 @@ test: require-INSTALL_TO
 
 doc: require-INSTALL_TO
 	PATH=${INSTALL_TO}/:${PATH} stack build --system-ghc --no-run-tests --no-run-benchmarks --haddock --haddock-deps --haddock-internal --haddock-hyperlink-source
+	echo "Haddocks Rendered to:"
+	PATH=${INSTALL_TO}/:${PATH} stack path --local-doc-root
 
 require-%:
 	if [ "${${*}}" = "" ]; then \
