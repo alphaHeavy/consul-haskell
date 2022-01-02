@@ -18,7 +18,7 @@ extra-deps:
       - sydtest-yesod
 
 # When bumping the resolver, update the GHC version in shell.nix accordingly.
-resolver: lts-16.31
+resolver: lts-18.20
 
 nix:
   shell-file: shell.nix
