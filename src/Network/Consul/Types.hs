@@ -34,6 +34,8 @@ module Network.Consul.Types
   , SessionInfo(..)
   , SessionRequest(..)
   , Sequencer(..)
+  , WANCoordinates(..)
+  , NodeCoordinates(..)
   , ConsulHost
     -- * Internal Data Types
   , ApiEndpoint
@@ -660,6 +662,89 @@ instance FromJSON ServiceResult where
       <*> x .:? "ServicePort"
   parseJSON _ = mzero
 
+{- |
+
+@since 0.0.0.0
+-}
+data WANCoordinates = WANCoordinates
+  { datacenter :: Datacenter
+  , areaID :: Maybe Text
+  , coordinates :: [NodeCoordinates]
+  } deriving (Eq, Show)
+
+{- |
+
+@since 0.0.0.0
+-}
+instance FromJSON WANCoordinates where
+  parseJSON (Object v) =
+    WANCoordinates
+      <$> v .: "Datacenter"
+      <*> v .: "AreaID"
+      <*> v .: "Coordinates"
+  parseJSON _ = mzero
+
+-- TODO: document
+data NodeCoordinates = NodeCoordinates
+  { node :: Text
+  , segment :: Maybe Text
+  , coord :: Coordinate
+  } deriving (Eq, Show)
+
+{- |
+
+@since 0.0.0.0
+-}
+instance FromJSON NodeCoordinates where
+  parseJSON (Object v) =
+    NodeCoordinates
+      <$> v .:  "Node"
+      <*> v .:? "Segment"
+      <*> v .:  "Coord"
+  parseJSON _ = mzero
+
+-- | TODO: check that this is correct, what to do about Maybe segment?
+instance ToJSON NodeCoordinates where
+  toJSON (NodeCoordinates node segment coord) =
+    object
+      [ "Node" .= node
+      , "Segment" .= segment
+      , "Coordinate" .= coord
+      ]
+
+data Coordinate = Coordinate
+  { adjustment :: Int
+  , error :: Double
+  , height :: Int
+  , vec :: [Int]
+  } deriving (Eq, Show)
+
+
+{- |
+
+@since 0.0.0.0
+-}
+instance FromJSON Coordinate where
+  parseJSON (Object v) =
+    Coordinate
+      <$> v .: "Adjustment"
+      <*> v .: "Error"
+      <*> v .: "Height"
+      <*> v .: "Vec"
+  parseJSON _ = mzero
+
+-- | TODO: check that this is correct, what to do about [Int] vec? make a Vec data?
+instance ToJSON Coordinate where
+  toJSON (Coordinate adjustment error height vec) =
+    object
+      [ "Adjustment" .= adjustment
+      , "Error" .= error
+      , "Height" .= height
+      , "Vec" .= vec
+      ]
+
+
+-- Internal Types
 
 {- | TODO: Review and doocument
 

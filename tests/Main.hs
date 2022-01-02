@@ -25,6 +25,7 @@ import Network.Consul
   , getSessionInfo
   , initializeConsulClient
   , isValidSequencer
+  , listServerWANCoordinates
   , putKey
   , putKeyAcquireLock
   , withSession
@@ -449,6 +450,59 @@ testIsValidSequencer = testCase "testIsValidSequencer" $ do
       result2 <- isValidSequencer client sequencer
       assertEqual "testIsValidSequencer: Invalid session was valid" False result2
 
+-- TODO: WHY CAN'T WE SEE THE JSON RESPONSE? STILL NEED TO WIRE UP CORRECT ASSERTION
+testListServerWANCoordinates :: TestTree
+testListServerWANCoordinates = testCase "testListServerWANCoordinates" $ do
+  client@ConsulClient{..} <- newClient
+  result <- listServerWANCoordinates client
+  print result
+  case result of
+    x -> do
+      print x
+      return () -- assertEqual "testGetKey: Incorrect Value" (kvValue x) (Just "Test")
+    [] -> assertFailure "testListServerWANCoordinates: No response returned"
+
+
+-- TODO: WHY CAN'T WE SEE THE JSON RESPONSE? STILL NEED TO WIRE UP CORRECT ASSERTION
+testGetNodeLANCoordinates :: TestTree
+testGetNodeLANCoordinates = testCase "testGetNodeLANCoordinates" $ do
+  client@ConsulClient{..} <- newClient
+  result <- getNodeLANCoordinates "localhost" client
+  print result
+  case result of
+    x -> do
+      print x
+      return () -- assertEqual "testGetKey: Incorrect Value" (kvValue x) (Just "Test")
+    [] -> assertFailure "testGetNodeLANCoordinates: No response returned"
+
+ 
+-- TODO: WHY CAN'T WE SEE THE JSON RESPONSE? STILL NEED TO WIRE UP CORRECT ASSERTION
+testListNodeLANCoordinates :: TestTree
+testListNodeLANCoordinates = testCase "testListNodeLANCoordinates" $ do
+  client@ConsulClient{..} <- newClient
+  result <- listNodeLANCoordinates client
+  print result
+  case result of
+    x -> do
+      print x
+      return () -- assertEqual "testGetKey: Incorrect Value" (kvValue x) (Just "Test")
+    [] -> assertFailure "testListNodeLANCoordinates: No response returned"
+ 
+-- | TODO: need to implement.. get node coordinates, update, get, assertions
+testUpdateNodeLANCoordinates :: TestTree
+testUpdateNodeLANCoordinates = testCase "testUpdateNodeLANCoordinates" $ do
+  return ()
+--client@ConsulClient{..} <- newClient
+--let req = RegisterService Nothing "testService" ["test"] Nothing (Just $ Ttl "10s")
+--val <- registerService client req
+--assertEqual "testRegisterService: Service was not created" val True
+--mService <- getService client "testService" Nothing
+--let serviceWasNotFound = assertFailure "testRegisterService: Service was not found"
+--case mService of
+--  Just [] -> serviceWasNotFound
+--  Nothing -> serviceWasNotFound
+--  Just _ -> return ()
+
 
 sessionWorkflowTests :: TestTree
 sessionWorkflowTests =
@@ -474,6 +528,16 @@ agentTests =
     , testDeregisterService
     ]
 
+coordinateTests :: TestTree
+coordinateTests =
+  testGroup
+    "Coordinate API Tests"
+    [ testListServerWANCoordinates
+    , testListNodeLANCoordinates 
+    , testGetNodeLANCoordinates
+    , testUpdateNodeLANCoordinates 
+    ]
+
 sequencerTests :: TestTree
 sequencerTests =
   testGroup
@@ -489,6 +553,7 @@ allTests =
     , internalKVTests
     , sessionWorkflowTests
     , agentTests
+    , coordinateTests
     , testHealth
     , clientKVTests
     , runServiceTests
@@ -503,7 +568,9 @@ main = do
     BS8.hPutStrLn h "{ \"disable_update_check\": true }" >> hFlush h
     let consulProc =
           proc
-            "consul"
+            "/run/current-system/sw/bin/consul"
+          --"/home/user/bin/consul"
+          --"consul"
             [ "agent", "-dev"
             , "-node", (unpack localhost) -- hardcode node name as "localhost" * see below
             , "-log-level", "err"

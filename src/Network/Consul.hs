@@ -35,6 +35,11 @@ module Network.Consul (
 
   --Agent
 
+  -- Coordinate API
+  , getNodeLANCoordinates
+  , listServerWANCoordinates
+  , listNodeLANCoordinates
+
   -- KV Store API
   , deleteKey
   , getKey
@@ -63,6 +68,7 @@ import Network.Consul.Client.Agent
 import Network.Consul.Client.Catalog
 import Network.Consul.Client.Config
 import Network.Consul.Client.Connect
+import Network.Consul.Client.Coordinates
 import Network.Consul.Client.Events
 import Network.Consul.Client.Health
 import Network.Consul.Client.Init
