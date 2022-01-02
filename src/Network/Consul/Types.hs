@@ -6,45 +6,46 @@
 {- |
 Internal data type and instance definitions for interacting with Consul's API.
 
-Please feel free to contribute via the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
+Please feel free to contribute via the
+[repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
 -}
-module Network.Consul.Types (
-  -- * Consul API Response Data Types
-  Check(..),
-  Config(..),
-  Consistency(..),
-  ConsulClient(..),
-  Datacenter (..),
-  Health(..),
-  HealthCheck(..),
-  HealthCheckStatus(..),
-  Network.Consul.Types.KeyValue(..),
-  KeyValuePut(..),
-  Member(..),
-  Node(..),
-  RegisterRequest(..),
-  RegisterHealthCheck(..),
-  RegisterService(..),
-  Self(..),
-  Service(..),
-  ServiceResult(..),
-  Session(..),
-  SessionBehavior(..),
-  SessionInfo(..),
-  SessionRequest(..),
-  Sequencer(..),
-  -- * Internal Data Types
-  ConsulHost,
-  ApiEndpoint,
-  ConsulQuery,
-  ConsulRequestBody,
-  WaitFlag,
-  -- * Utility Data Types
-  noQuery,
-  noRequestBody,
-  waitTrue,
-  waitFalse
-) where
+module Network.Consul.Types
+  ( -- * Consul API Response Data Types
+    Check(..)
+  , Config(..)
+  , Consistency(..)
+  , ConsulClient(..)
+  , Datacenter (..)
+  , Health(..)
+  , HealthCheck(..)
+  , HealthCheckStatus(..)
+  , Network.Consul.Types.KeyValue(..)
+  , KeyValuePut(..)
+  , Member(..)
+  , Node(..)
+  , RegisterRequest(..)
+  , RegisterHealthCheck(..)
+  , RegisterService(..)
+  , Self(..)
+  , Service(..)
+  , ServiceResult(..)
+  , Session(..)
+  , SessionBehavior(..)
+  , SessionInfo(..)
+  , SessionRequest(..)
+  , Sequencer(..)
+  , ConsulHost
+    -- * Internal Data Types
+  , ApiEndpoint
+  , ConsulQuery
+  , ConsulRequestBody
+  , WaitFlag
+    -- * Utility Data Types
+  , noQuery
+  , noRequestBody
+  , waitTrue
+  , waitFalse
+  ) where
 
 import Control.Monad
 import Data.Aeson
@@ -130,56 +131,56 @@ data HealthCheck
 
 @since 0.0.0.0
 -}
-data KeyValue = KeyValue {
-  kvCreateIndex :: Word64,
-  kvLockIndex :: Word64,
-  kvModifyIndex :: Word64,
-  kvValue :: Maybe ByteString,
-  kvFlags :: Word64,
-  kvSession :: Maybe Text,
-  kvKey :: Text
-} deriving (Eq, Ord, Show)
+data KeyValue = KeyValue
+  { kvCreateIndex :: Word64
+  , kvLockIndex :: Word64
+  , kvModifyIndex :: Word64
+  , kvValue :: Maybe ByteString
+  , kvFlags :: Word64
+  , kvSession :: Maybe Text
+  , kvKey :: Text
+  } deriving (Eq, Ord, Show)
 
 
 {- | Represents a KV being written (PUT) to the Consul KV.
 
 @since 0.1.0
 -}
-data KeyValuePut = KeyValuePut {
-  kvpKey :: Text,
-  kvpValue :: ByteString,
-  kvpCasIndex :: Maybe Word64,
-  kvpFlags :: Maybe Word64
-} deriving (Eq, Ord, Show)
+data KeyValuePut = KeyValuePut
+  { kvpKey :: Text
+  , kvpValue :: ByteString
+  , kvpCasIndex :: Maybe Word64
+  , kvpFlags :: Maybe Word64
+  } deriving (Eq, Ord, Show)
 
 
 {- | Represents a Consul Session
 
 @since 0.1.0
 -}
-data Session = Session {
-  sId :: Text,
-  sCreateIndex :: Maybe Word64
-} deriving (Eq, Ord, Show)
+data Session = Session
+  { sId :: Text
+  , sCreateIndex :: Maybe Word64
+  } deriving (Eq, Ord, Show)
 
 
 {- | Represents the session info/data associated with a session.
 
 @since 0.0.0.0
 -}
-data SessionInfo = SessionInfo {
-  siId :: Text, -- TODO: switch to uuid
-  siName :: Maybe Text,
-  siNode :: Text,
-  siLockDelay :: Maybe Word64,
-  siBehavior :: Maybe SessionBehavior,
-  siTtl :: Maybe Text,
-  siChecks :: Maybe [Text],
-  siNodeChecks :: Maybe [Text],
-  siServiceChecks :: Maybe [Text],
-  siCreateIndex :: Word64,
-  siModifyIndex :: Word64
-} deriving (Eq, Ord, Show)
+data SessionInfo = SessionInfo
+  { siId :: Text -- TODO: switch to uuid
+  , siName :: Maybe Text
+  , siNode :: Text
+  , siLockDelay :: Maybe Word64
+  , siBehavior :: Maybe SessionBehavior
+  , siTtl :: Maybe Text
+  , siChecks :: Maybe [Text]
+  , siNodeChecks :: Maybe [Text]
+  , siServiceChecks :: Maybe [Text]
+  , siCreateIndex :: Word64
+  , siModifyIndex :: Word64
+  } deriving (Eq, Ord, Show)
 
 
 {- |
@@ -194,160 +195,160 @@ newtype SessionInfoList
 
 @since 0.0.0.0
 -}
-data SessionRequest = SessionRequest {
-  srLockDelay :: Maybe Text,
-  srName :: Maybe Text,
-  srNode :: Node,
-  srChecks :: [Text],
-  srBehavor :: Maybe SessionBehavior,
-  srTtl :: Maybe Text
-} deriving (Eq, Ord, Show)
+data SessionRequest = SessionRequest
+  { srLockDelay :: Maybe Text
+  , srName :: Maybe Text
+  , srNode :: Node
+  , srChecks :: [Text]
+  , srBehavor :: Maybe SessionBehavior
+  , srTtl :: Maybe Text
+  } deriving (Eq, Ord, Show)
 
 
 {- |
 
 @since 0.0.0.0
 -}
-data Sequencer = Sequencer{
-  sKey :: Text,
-  sLockIndex :: Word64,
-  sSession :: Session
-} deriving (Eq, Ord, Show)
+data Sequencer = Sequencer
+  { sKey :: Text
+  , sLockIndex :: Word64
+  , sSession :: Session
+  } deriving (Eq, Ord, Show)
 
 
 {- |
 
 @since 0.1.0
 -}
-data RegisterRequest = RegisterRequest {
-  rrDatacenter :: Maybe Datacenter,
-  rrNode :: Text,
-  rrAddress :: Text,
-  rrService :: Maybe Service,
-  rrCheck :: Maybe Check
-} deriving (Eq, Ord, Show)
+data RegisterRequest = RegisterRequest
+  { rrDatacenter :: Maybe Datacenter
+  , rrNode :: Text
+  , rrAddress :: Text
+  , rrService :: Maybe Service
+  , rrCheck :: Maybe Check
+  } deriving (Eq, Ord, Show)
 
 
 {- |
 
 @since 0.1.0
 -}
-data Service = Service {
-  seId :: Text,
-  seService :: Text,
-  seTags :: [Text],
-  seAddress :: Maybe Text,
-  sePort :: Maybe Int
-} deriving (Eq, Ord, Show)
+data Service = Service
+  { seId :: Text
+  , seService :: Text
+  , seTags :: [Text]
+  , seAddress :: Maybe Text
+  , sePort :: Maybe Int
+  } deriving (Eq, Ord, Show)
 
 
 {-
 
 @since 0.0.0.0
 -}
-data ServiceResult = ServiceResult {
-  srrNode :: Text,
-  srrAddress :: Text,
-  srrServiceId :: Text,
-  srrServiceName :: Text,
-  srrServiceTags :: [Text],
-  srrServiceAddress :: Maybe Text,
-  srrServicePort :: Maybe Int
-} deriving (Eq, Ord, Show)
+data ServiceResult = ServiceResult
+  { srrNode :: Text
+  , srrAddress :: Text
+  , srrServiceId :: Text
+  , srrServiceName :: Text
+  , srrServiceTags :: [Text]
+  , srrServiceAddress :: Maybe Text
+  , srrServicePort :: Maybe Int
+  } deriving (Eq, Ord, Show)
 
 
 {- |
 
 @since 0.1.0
 -}
-data Check = Check {
-  cNode :: Text,
-  cCheckId :: Text,
-  cName :: Maybe Text,
-  cNotes :: Maybe Text,
-  cServiceId :: Maybe Text,
-  cStatus :: HealthCheckStatus,
-  cOutput :: Text,
-  cServiceName :: Maybe Text
-} deriving (Eq, Ord, Show)
+data Check = Check
+  { cNode :: Text
+  , cCheckId :: Text
+  , cName :: Maybe Text
+  , cNotes :: Maybe Text
+  , cServiceId :: Maybe Text
+  , cStatus :: HealthCheckStatus
+  , cOutput :: Text
+  , cServiceName :: Maybe Text
+  } deriving (Eq, Ord, Show)
 
 
 {- |
 
 @since 0.2.0
 -}
-data Node = Node {
-  nNode :: Text,
-  nAddress :: Text
-} deriving (Eq, Ord, Show)
+data Node = Node
+  { nNode :: Text
+  , nAddress :: Text
+  } deriving (Eq, Ord, Show)
 
 
 {-| Agent 
 
 @since 0.0.0.0
 -}
-data RegisterHealthCheck = RegisterHealthCheck {
-  rhcId :: Text,
-  rhcName :: Text,
-  rhcNotes :: Text,
-  rhcScript :: Maybe Text,
-  rhcInterval :: Maybe Text,
-  rhcTtl :: Maybe Text
-} deriving (Eq, Ord, Show)
+data RegisterHealthCheck = RegisterHealthCheck
+  { rhcId :: Text
+  , rhcName :: Text
+  , rhcNotes :: Text
+  , rhcScript :: Maybe Text
+  , rhcInterval :: Maybe Text
+  , rhcTtl :: Maybe Text
+  } deriving (Eq, Ord, Show)
 
 
 {- |
 
 @since 0.0.0.0
 -}
-data RegisterService = RegisterService {
-  rsId :: Maybe Text,
-  rsName :: Text,
-  rsTags :: [Text],
-  rsPort :: Maybe Int16,
-  rsCheck :: Maybe HealthCheck
-} deriving (Eq, Ord, Show)
+data RegisterService = RegisterService
+  { rsId :: Maybe Text
+  , rsName :: Text
+  , rsTags :: [Text]
+  , rsPort :: Maybe Int16
+  , rsCheck :: Maybe HealthCheck
+  } deriving (Eq, Ord, Show)
 
 
 {- |
 
 @since 0.0.0.0
 -}
-data Self = Self {
-  sMember :: Member
-} deriving (Eq, Show)
+data Self = Self
+  { sMember :: Member
+  } deriving (Eq, Show)
 
 
 {- |
 
 @since 0.0.0.0
 -}
-data Config = Config {
-  cBootstrap :: Bool,
-  cServer :: Bool,
-  cDatacenter :: Datacenter,
-  cDataDir :: Text,
-  cClientAddr :: Text
-} deriving (Eq, Ord, Show)
+data Config = Config
+  { cBootstrap :: Bool
+  , cServer :: Bool
+  , cDatacenter :: Datacenter
+  , cDataDir :: Text
+  , cClientAddr :: Text
+  } deriving (Eq, Ord, Show)
 
 
 {- |
 
 @since 0.0.0.0
 -}
-data Member = Member {
-  mName :: Text,
-  mAddress :: Text,
-  mPort :: Int ,
-  mTags :: Object,
-  mStatus :: Int,
-  mProtocolMin :: Int,
-  mProtocolMax :: Int,
-  mProtocolCur :: Int,
-  mDelegateMin :: Int,
-  mDelegateMax :: Int,
-  mDelegateCur :: Int
-} deriving (Eq, Show)
+data Member = Member
+  { mName :: Text
+  , mAddress :: Text
+  , mPort :: Int 
+  , mTags :: Object
+  , mStatus :: Int
+  , mProtocolMin :: Int
+  , mProtocolMax :: Int
+  , mProtocolCur :: Int
+  , mDelegateMin :: Int
+  , mDelegateMax :: Int
+  , mDelegateCur :: Int
+  } deriving (Eq, Show)
 
 
 {- |
@@ -356,11 +357,11 @@ Health
 
 @since 0.0.0.0
 -}
-data Health = Health {
-  hNode :: Node,
-  hService :: Service,
-  hChecks :: [Check]
-} deriving (Eq, Ord, Show)
+data Health = Health
+  { hNode :: Node
+  , hService :: Service
+  , hChecks :: [Check]
+  } deriving (Eq, Ord, Show)
 
 
 {- | JSON Instances
@@ -368,7 +369,9 @@ data Health = Health {
 @since 0.0.0.0
 -}
 instance FromJSON Self where
-  parseJSON (Object v) = Self <$> v .: "Member"
+  parseJSON (Object v) =
+    Self
+      <$> v .: "Member"
   parseJSON _ = mzero
 
 
@@ -377,7 +380,13 @@ instance FromJSON Self where
 @since 0.0.0.0
 -}
 instance FromJSON Config where
-  parseJSON (Object v) = Config <$> v .: "Bootstrap" <*> v .: "Server" <*> v .: "Datacenter" <*> v .: "DataDir" <*> v .: "ClientAddr"
+  parseJSON (Object v) =
+    Config
+      <$> v .: "Bootstrap"
+      <*> v .: "Server"
+      <*> v .: "Datacenter"
+      <*> v .: "DataDir"
+      <*> v .: "ClientAddr"
   parseJSON _ = mzero
 
 
@@ -386,7 +395,19 @@ instance FromJSON Config where
 @since 0.0.0.0
 -}
 instance FromJSON Member where
-  parseJSON (Object v) = Member <$> v .: "Name" <*> v .: "Addr" <*> v .: "Port" <*> v .: "Tags" <*> v .: "Status" <*> v .: "ProtocolMin" <*> v .: "ProtocolMax" <*> v .: "ProtocolCur" <*> v .: "DelegateMin" <*> v .: "DelegateMax" <*> v .: "DelegateCur"
+  parseJSON (Object v) =
+    Member
+      <$> v .: "Name"
+      <*> v .: "Addr"
+      <*> v .: "Port"
+      <*> v .: "Tags"
+      <*> v .: "Status"
+      <*> v .: "ProtocolMin"
+      <*> v .: "ProtocolMax"
+      <*> v .: "ProtocolCur"
+      <*> v .: "DelegateMin"
+      <*> v .: "DelegateMax"
+      <*> v .: "DelegateCur"
   parseJSON _ = mzero
 
 
@@ -435,13 +456,13 @@ instance FromJSON Datacenter where
 instance FromJSON Check where
   parseJSON (Object x) =
     Check
-      <$> x .: "Node"
-      <*> x .: "CheckID"
-      <*> x .: "Name"
+      <$> x .:  "Node"
+      <*> x .:  "CheckID"
+      <*> x .:  "Name"
       <*> x .:? "Notes"
       <*> x .:? "ServiceID"
-      <*> x .: "Status"
-      <*> x .: "Output"
+      <*> x .:  "Status"
+      <*> x .:  "Output"
       <*> x .:? "ServiceName"
   parseJSON _ = mzero
 
@@ -453,9 +474,9 @@ instance FromJSON Check where
 instance FromJSON Service where
   parseJSON (Object x) =
     Service
-      <$> x .: "ID"
-      <*> x .: "Service"
-      <*> x .: "Tags"
+      <$> x .:  "ID"
+      <*> x .:  "Service"
+      <*> x .:  "Tags"
       <*> x .:? "Address"
       <*> x .:? "Port"
   parseJSON _ = mzero
@@ -480,7 +501,7 @@ instance FromJSON Node where
 instance FromJSON Health where
   parseJSON (Object x) =
     Health
-      <$> x.: "Node"
+      <$> x .: "Node"
       <*> x .: "Service"
       <*> x .: "Checks"
   parseJSON _ = mzero
@@ -554,7 +575,15 @@ instance ToJSON SessionBehavior where
 @since 0.0.0.0
 -}
 instance ToJSON RegisterHealthCheck where
-  toJSON (RegisterHealthCheck i name notes script interval ttl) = object ["id" .= i, "name" .= name, "notes" .= notes, "script" .= script, "interval" .= interval, "ttl" .= ttl]
+  toJSON (RegisterHealthCheck i name notes script interval ttl) =
+    object
+      [ "id" .= i
+      , "name" .= name
+      , "notes" .= notes
+      , "script" .= script
+      , "interval" .= interval
+      , "ttl" .= ttl
+      ]
 
 
 {- |
@@ -562,7 +591,14 @@ instance ToJSON RegisterHealthCheck where
 @since 0.0.0.0
 -}
 instance ToJSON RegisterService where
-  toJSON (RegisterService i name tags port check) = object ["ID" .= i, "Name" .= name, "tags" .= tags, "port" .= port, "Check" .= check]
+  toJSON (RegisterService i name tags port check) =
+    object
+      [ "ID" .= i
+      , "Name" .= name
+      , "tags" .= tags
+      , "port" .= port
+      , "Check" .= check
+      ]
 
 
 {- |
@@ -580,7 +616,15 @@ instance ToJSON HealthCheck where
 @since 0.0.0.0
 -}
 instance ToJSON SessionRequest where
-  toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
+  toJSON (SessionRequest lockDelay name node checks behavior ttl) =
+    object
+      [ "LockDelay" .= lockDelay
+      , "Name" .= name
+      , "Node" .= (nNode node)
+      , "Checks" .= checks
+      , "Behavior" .= behavior
+      , "TTL" .= ttl
+      ]
 
 
 {- |
@@ -588,7 +632,16 @@ instance ToJSON SessionRequest where
 @since 0.0.0.0
 -}
 instance ToJSON ServiceResult where
-  toJSON (ServiceResult node addr sid sName sTags sAddress sPort) = object["Node" .= node, "Address" .= addr, "ServiceID" .= sid, "ServiceName" .= sName, "ServiceTags" .= sTags, "ServiceAddress" .= sAddress, "ServicePort" .= sPort]
+  toJSON (ServiceResult node addr sid sName sTags sAddress sPort) =
+    object
+      [ "Node" .= node
+      , "Address" .= addr
+      , "ServiceID" .= sid
+      , "ServiceName" .= sName
+      , "ServiceTags" .= sTags
+      , "ServiceAddress" .= sAddress
+      , "ServicePort" .= sPort
+      ]
 
 
 {- |
@@ -596,7 +649,15 @@ instance ToJSON ServiceResult where
 @since 0.0.0.0
 -}
 instance FromJSON ServiceResult where
-  parseJSON (Object x) = ServiceResult <$> x .: "Node" <*> x .: "Address" <*> x .: "ServiceID" <*> x .: "ServiceName" <*> x .: "ServiceTags" <*> x .:? "ServiceAddress" <*> x .:? "ServicePort"
+  parseJSON (Object x) =
+    ServiceResult
+      <$> x .:  "Node"
+      <*> x .:  "Address"
+      <*> x .:  "ServiceID"
+      <*> x .:  "ServiceName"
+      <*> x .:  "ServiceTags"
+      <*> x .:? "ServiceAddress"
+      <*> x .:? "ServicePort"
   parseJSON _ = mzero
 
 
