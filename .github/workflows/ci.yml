@@ -24,8 +24,9 @@ jobs:
           - "1.6.10"
           - "1.7.11"
           - "1.8.7"
-          - "1.9.4"
-          - "1.10.0-alpha"
+          - "1.9.13"
+          - "1.10.6"
+          - "1.11.1"
     steps:
     - name: Checkout Git Repo
       uses: actions/checkout@v2
