@@ -33,10 +33,11 @@ jobs:
       if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
 
     - name: Setup Haskell Stack
-      uses: actions/setup-haskell@v1.1
+      uses: haskell/actions/setup@v1
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       with:
+        enable-stack: true
         ghc-version: ${{ matrix.ghc }}
         stack-version: ${{ matrix.stack }}
 
@@ -97,10 +98,11 @@ jobs:
       if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
 
     - name: Setup Haskell Stack
-      uses: actions/setup-haskell@v1.1
+      uses: haskell/actions/setup@v1
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       with:
+        enable-stack: true
         ghc-version: ${{ matrix.ghc }}
         stack-version: ${{ matrix.stack }}
 
