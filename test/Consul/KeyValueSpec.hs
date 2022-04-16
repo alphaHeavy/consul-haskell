@@ -13,19 +13,19 @@ import Test.Syd
 spec :: Spec
 spec = aroundAll withConsulServer $ do
 
-  itWithOuter "Get Invalid Key" $ \_ -> (do
+  itWithOuter "Get Invalid Key" $ \_ -> do
     client@ConsulClient{..} <- newClient
     -- specify the datacenter as part of our request
     x <- getKey client{ ccDatacenter = dc1  } "nokey" Nothing Nothing
-    context "testGetInvalidKey: Found a key that doesn't exist" $ shouldBe x Nothing)
+    context "testGetInvalidKey: Found a key that doesn't exist" $ shouldBe x Nothing
 
-  itWithOuter "testPutKey" $ \_ -> (do
+  itWithOuter "testPutKey" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let put = KeyValuePut "/testPutKey" "Test" Nothing Nothing
     x <- putKey client put
-    context "testPutKey: Write failed" $ shouldBe True x)
+    context "testPutKey: Write failed" $ shouldBe True x
 
-  itWithOuter "testPutKeyAcquireLock" $ \_ -> (do
+  itWithOuter "testPutKeyAcquireLock" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let ttl = "30s"
         req =
@@ -45,10 +45,10 @@ spec = aroundAll withConsulServer $ do
         context "testPutKeyAcquireLock: Write failed" $ shouldBe  True x
         Just kv <- getKey client "/testPutKeyAcquireLock" Nothing Nothing
         let Just returnedSession = kvSession kv
-        context "testPutKeyAcquireLock: Session was not found on key" $ shouldBe returnedSession (sId session))
+        context "testPutKeyAcquireLock: Session was not found on key" $ shouldBe returnedSession (sId session)
 
 
-  itWithOuter "testPutKeyReleaseLock" $ \_ -> (do
+  itWithOuter "testPutKeyReleaseLock" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let ttl = "30s"
         req =
@@ -73,10 +73,10 @@ spec = aroundAll withConsulServer $ do
         x2 <- putKeyReleaseLock client put2 session
         context "testPutKeyReleaseLock: Release failed" $ shouldBe True x2
         Just kv2 <- getKey client "/testPutKeyReleaseLock" Nothing Nothing
-        context "testPutKeyAcquireLock: Session still held" $ shouldBe Nothing (kvSession kv2))
+        context "testPutKeyAcquireLock: Session still held" $ shouldBe Nothing (kvSession kv2)
 
 
-  itWithOuter "testGetKey" $ \_ -> (do
+  itWithOuter "testGetKey" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let put = KeyValuePut "/testGetKey" "Test" Nothing Nothing
     x1 <- putKey client put
@@ -84,9 +84,9 @@ spec = aroundAll withConsulServer $ do
     x2 <- getKey client "/testGetKey" Nothing Nothing
     case x2 of
       Just x -> context "testGetKey: Incorrect Value" $ shouldBe (kvValue x) (Just "Test")
-      Nothing -> expectationFailure "testGetKey: No value returned")
+      Nothing -> expectationFailure "testGetKey: No value returned"
 
-  itWithOuter "testGetNullValueKey" $ \_ -> (do
+  itWithOuter "testGetNullValueKey" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let put = KeyValuePut "/testGetNullValueKey" "" Nothing Nothing
     x1 <- putKey client put
@@ -95,9 +95,9 @@ spec = aroundAll withConsulServer $ do
     x2 <- getKey client "/testGetNullValueKey" Nothing Nothing
     case x2 of
       Just x -> context "testGetNullValueKey: Incorrect Value" $ shouldBe (kvValue x) Nothing
-      Nothing -> expectationFailure "testGetNullValueKey: No value returned")
+      Nothing -> expectationFailure "testGetNullValueKey: No value returned"
 
-  itWithOuter "testGetKeys" $ \_ -> (do
+  itWithOuter "testGetKeys" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let put1 = KeyValuePut "/testGetKeys/key1" "Test" Nothing Nothing
     x1 <- putKey client put1
@@ -106,9 +106,9 @@ spec = aroundAll withConsulServer $ do
     x2 <- putKey client put2
     context "testGetKeys: Write failed" $ shouldBe True x2
     x3 <- getKeys client "/testGetKeys" Nothing Nothing
-    context "testGetKeys: Incorrect number of results" $ shouldBe 2 (length x3))
+    context "testGetKeys: Incorrect number of results" $ shouldBe 2 (length x3)
 
-  itWithOuter "testListKeys" $ \_ -> (do
+  itWithOuter "testListKeys" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let put1 = KeyValuePut "/testListKeys/key1" "Test" Nothing Nothing
     x1 <- putKey client put1
@@ -117,9 +117,9 @@ spec = aroundAll withConsulServer $ do
     x2 <- putKey client put2
     context "testListKeys: Write failed" $ shouldBe True x2
     x3 <- listKeys client "/testListKeys/" Nothing Nothing
-    context "testListKeys: Incorrect number of results" $ shouldBe 2 (length x3))
+    context "testListKeys: Incorrect number of results" $ shouldBe 2 (length x3)
 
-  itWithOuter "testDeleteKey" $ \_ -> (do
+  itWithOuter "testDeleteKey" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let put1 = KeyValuePut "/testDeleteKey" "Test" Nothing Nothing
     x1 <- putKey client put1
@@ -127,9 +127,9 @@ spec = aroundAll withConsulServer $ do
     x2 <- deleteKey client "/testDeleteKey" False
     context "testDeleteKey: Delete Failed" $ shouldBe True x2
     x3 <- getKey client "/testDeleteKey" Nothing Nothing
-    context "testDeleteKey: Key was not deleted" $ shouldBe Nothing x3)
+    context "testDeleteKey: Key was not deleted" $ shouldBe Nothing x3
 
-  itWithOuter "testDeleteRecursive" $ \_ -> (do
+  itWithOuter "testDeleteRecursive" $ \_ -> do
     client@ConsulClient{..} <- newClient
     let put1 = KeyValuePut "/testDeleteRecursive/1" "Test" Nothing Nothing
         put2 = KeyValuePut "/testDeleteRecursive/2" "Test" Nothing Nothing
@@ -139,4 +139,4 @@ spec = aroundAll withConsulServer $ do
     context "testDeleteKey: Write failed" $ shouldBe True x2
     deleteKey client "/testDeleteRecursive/" True
     x3 <- getKey client "/testDeleteRecursive/1" Nothing Nothing
-    context "testDeleteKey: Key was not deleted" $ shouldBe Nothing x3)
+    context "testDeleteKey: Key was not deleted" $ shouldBe Nothing x3
