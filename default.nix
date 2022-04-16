@@ -2,11 +2,11 @@
 let
   pinnedPkgs = import (builtins.fetchTarball {
     # Descriptive name to make the store path easier to identify
-    name = "nixos-20.09-2020-12-13";
+    name = "nixos-20.09-2021-04-13";
     # Current commit from https://github.com/NixOS/nixpkgs/tree/nixos-20.09
-    url = "https://github.com/nixos/nixpkgs/archive/65c9cc79f1d179713c227bf447fb0dac384cdcda.tar.gz";
+    url = "https://github.com/nixos/nixpkgs/archive/dec334fa196a4aeedb1b60d8f7d61aa00d327499.tar.gz";
     # Hash obtained using `nix-prefetch-url --unpack <url>`
-    sha256 = "0whxlm098vas4ngq6hm3xa4mdd2yblxcl5x5ny216zajp08yp1wf";
+    sha256 = "1sm1p2qliz11qw6va01knm0rikhpq2h4c70ci98vi4q26y4q9z72";
   }) {};
 
   packageName = "consul-haskell";
@@ -27,6 +27,7 @@ let
     name = "consul-haskell";
     includeDirs = [
       ./src
+      ./test
       ./tests
     ];
     includeFiles = [
@@ -34,6 +35,7 @@ let
       ./Setup.hs
       ./LICENSE
       ./README.md
+      ./CHANGELOG.md
     ];
     pathComponentExcludes = [ "build" "gen" ];
   };
