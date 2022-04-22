@@ -10,15 +10,28 @@ extra-deps:
       - safe-coloured-text
       - safe-coloured-text-terminfo
   - github: NorfairKing/sydtest
-    commit: 83685ec68c3c167503ba8aee44000f2d8bb43a07
+    commit: aac96e2e520a4fca97bccd3403721dc0036b026f
     subdirs:
       - sydtest
       - sydtest-discover
+      - sydtest-process
+      - sydtest-typed-process
       - sydtest-wai
       - sydtest-yesod
+
+  - github: NorfairKing/autodocodec
+    commit: be340221275c6a26be6afe80548d2b834df0dbcf
+    subdirs:
+      - autodocodec
+      - autodocodec-yaml
+      - autodocodec-schema
 
 # When bumping the resolver, update the GHC version in shell.nix accordingly.
 resolver: lts-18.20
 
 nix:
-  shell-file: shell.nix
+  enable: true
+  packages: [ zlib ]
+
+#nix:
+#  shell-file: shell.nix

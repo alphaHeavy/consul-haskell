@@ -3,8 +3,10 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Util
-  ( checkIds
+  ( ConsulServerHandle (..)
+  , checkIds
   , consulPort
+  , consulServerSetupFunc 
   , dc1
   , fiveSecondMicros
   , newClient
@@ -14,7 +16,7 @@ module Util
   , localhost
   , localNode
   , lockDelay
-  , withSystemTempFile
+  , UnliftIO.Temporary.withSystemTempFile
   , withConsulServer
   ) where
 
@@ -28,12 +30,22 @@ import Data.Text (unpack, Text)
 import Network.Socket (PortNumber)
 import SocketUtils (isPortOpen, simpleSockAddr)
 import System.IO (hFlush)
-import System.Process.Typed (proc)
+import System.Process.Typed (proc, setWorkingDir, nullStream, setStderr, setStdout)
 import UnliftIO.Temporary (withSystemTempFile)
 
 import Network.Consul.Internal
 import Network.Consul.Types
 import Network.Consul (initializeConsulClient)
+
+-- new imports for new consul setup functions
+import Test.Syd -- (SetupFunc)
+import Test.Syd.Path -- (tempBinaryFileWithContentsSetupFunc)
+import Test.Syd.Process.Typed -- (typedProcessSetupFunc)
+import Network.Socket.Free
+import Network.Socket.Wait
+--import System.Process.Typed -- (TODO)
+import Path
+import Path.IO
 
 -- 5 seconds.
 fiveSecondMicros :: Int
@@ -75,8 +87,8 @@ dc1 :: Maybe Datacenter
 dc1 = Just $ Datacenter "dc1"
 
 -- Initialize a new `ConsulClient`.
-newClient :: IO ConsulClient
-newClient = initializeConsulClient localhost consulPort emptyHttpManager
+newClient :: PortNumber -> IO ConsulClient
+newClient consulPort = initializeConsulClient localhost consulPort emptyHttpManager
 
 
 
@@ -107,7 +119,7 @@ waitForConsulOrFail = do
 withConsulServer app = do
   -- We use a non-standard port in the test suite and spawn consul there,
   -- to ensure that the test suite doesn't mess with real consul deployments.
-  withSystemTempFile "haskell-consul-test-config.json" $ \configFilePath h -> do
+  UnliftIO.Temporary.withSystemTempFile "haskell-consul-test-config.json" $ \configFilePath h -> do
     BS8.hPutStrLn h "{ \"disable_update_check\": true }" >> hFlush h
     let consulProc =
           proc
@@ -119,7 +131,7 @@ withConsulServer app = do
             , "-http-port", show (fromIntegral consulPort :: Int)
             , "-config-file", configFilePath
             ]
-    withProcessTerm consulProc $ \_p -> do
+    Util.withProcessTerm consulProc $ \_p -> do
       waitForConsulOrFail
       -- to let the consul agent register itself (the node the agent is running on)
       -- TODO: should we instead query consul to lookup the node registration?
@@ -137,3 +149,32 @@ withConsulServer app = do
 
 --withConsulServer :: (ClientEnv -> IO ()) -> IO ()
 --withConsulServer = undefined
+
+data ConsulServerHandle = ConsulServerHandle
+  { consulServerHandlePort :: !PortNumber
+  }
+
+consulServerSetupFunc :: SetupFunc ConsulServerHandle 
+consulServerSetupFunc = do
+  tempDir <- tempDirSetupFunc "consul-server"
+  portInt <- liftIO getFreePort
+  configFilePath <- tempBinaryFileWithContentsSetupFunc
+    "consul-test-config"
+    "{ \"disable_update_check\": true }"
+  let processConfig =
+        setStdout nullStream $
+          setStderr nullStream $
+            setWorkingDir (fromAbsDir tempDir) $
+              proc
+                "/home/user/bin/consul"
+                [ "agent", "-dev"
+                , "-node", (unpack localhost) -- hardcode node name as "localhost" * see below
+                , "-log-level", "err"
+              --, "-log-level", "debug"        -- for debugging
+                , "-http-port", show portInt -- (fromIntegral consulPort :: Int)
+                , "-config-file", (fromAbsFile configFilePath)
+                ]
+  _ <- typedProcessSetupFunc processConfig
+  liftIO $ wait "127.0.0.1" portInt
+  let consulServerHandlePort = fromIntegral portInt
+  pure ConsulServerHandle {..}

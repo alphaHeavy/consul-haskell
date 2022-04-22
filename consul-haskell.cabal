@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.5.
 --
 -- see: https://github.com/sol/hpack
 
@@ -95,12 +95,16 @@ test-suite sydtest-testsuite
     , consul-haskell
     , http-client
     , network
+    , path
+    , path-io
+    , port-utils
     , random
     , retry
     , safe-coloured-text
     , safe-coloured-text-terminfo
     , sydtest
     , sydtest-discover
+    , sydtest-typed-process
     , text
     , typed-process
     , unliftio

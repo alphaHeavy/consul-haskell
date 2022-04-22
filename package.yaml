@@ -60,16 +60,20 @@ tests:
       - consul-haskell
       - http-client
       - network
+      - path
+      - path-io
       - random
       - retry
       - safe-coloured-text
       - safe-coloured-text-terminfo
       - sydtest
       - sydtest-discover
+      - sydtest-typed-process
       - text
       - typed-process
       - unliftio
       - uuid
+      - port-utils
 
   tasty-hunit-testsuite:
     main: Main.hs
