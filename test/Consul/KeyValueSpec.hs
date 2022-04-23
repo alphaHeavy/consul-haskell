@@ -10,7 +10,6 @@ module Consul.KeyValueSpec where
 import Import
 
 import Data.Text (pack)
-import Test.Syd
 
 spec :: Spec
 spec = setupAround consulServerSetupFunc $ do

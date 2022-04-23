@@ -3,6 +3,7 @@ module Import
   , module Util
   , module Network.Consul.Types
   , module Network.Consul
+  , module Test.Syd
   ) where
 
 import qualified Control.Concurrent as Import
@@ -42,5 +43,6 @@ import qualified System.Process.Typed as Import.PT
 import qualified System.Random as Import
 import qualified System.Timeout as Import (timeout)
 import qualified UnliftIO.Temporary as Import (withSystemTempFile)
+import Test.Syd
 
 import Util

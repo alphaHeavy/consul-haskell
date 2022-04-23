@@ -6,7 +6,6 @@
 module Consul.HealthCheckSpec (spec) where
 
 import Import
-import Test.Syd
 
 spec :: Spec
 spec = setupAround consulServerSetupFunc $ do
