@@ -26,7 +26,7 @@ import qualified System.Process.Typed as PT
 import Control.Concurrent
 import Control.Monad (when)
 import Control.Retry
-import Data.Text (unpack, Text)
+import Data.Text (pack, unpack, Text)
 import Network.Socket (PortNumber)
 import SocketUtils (isPortOpen, simpleSockAddr)
 import System.IO (hFlush)
@@ -89,6 +89,7 @@ dc1 = Just $ Datacenter "dc1"
 -- Initialize a new `ConsulClient`.
 newClient :: PortNumber -> IO ConsulClient
 newClient consulPort = initializeConsulClient localhost consulPort emptyHttpManager
+-- (pack ((unpack localhost) <> "-" <> (show consulPort)))
 
 
 
@@ -151,16 +152,28 @@ withConsulServer app = do
 --withConsulServer = undefined
 
 data ConsulServerHandle = ConsulServerHandle
-  { consulServerHandlePort :: !PortNumber
+  { consulServerHandleDnsPort :: !PortNumber
+  , consulServerHandleGrpcPort :: !PortNumber
+  , consulServerHandleHttpPort :: !PortNumber
+  , consulServerHandleRpcPort :: !PortNumber
+  , consulServerHandleSerfLanPort :: !PortNumber
+  , consulServerHandleSerfWanPort :: !PortNumber
+  , consulServerHandleNodeName :: !Node
   }
 
 consulServerSetupFunc :: SetupFunc ConsulServerHandle 
 consulServerSetupFunc = do
   tempDir <- tempDirSetupFunc "consul-server"
-  portInt <- liftIO getFreePort
+  dnsPortInt <- liftIO getFreePort
+  grpcPortInt <- liftIO getFreePort
+  httpPortInt <- liftIO getFreePort
+  rpcPortInt <- liftIO getFreePort
+  serfLanPortInt <- liftIO getFreePort
+  serfWanPortInt <- liftIO getFreePort
   configFilePath <- tempBinaryFileWithContentsSetupFunc
     "consul-test-config"
     "{ \"disable_update_check\": true }"
+  let nodeName = ((unpack localhost) <> "-" <> (show httpPortInt)) -- hardcode node name as "localhost" * see below
   let processConfig =
         setStdout nullStream $
           setStderr nullStream $
@@ -168,13 +181,24 @@ consulServerSetupFunc = do
               proc
                 "/home/user/bin/consul"
                 [ "agent", "-dev"
-                , "-node", (unpack localhost) -- hardcode node name as "localhost" * see below
+                , "-node", nodeName
                 , "-log-level", "err"
               --, "-log-level", "debug"        -- for debugging
-                , "-http-port", show portInt -- (fromIntegral consulPort :: Int)
+                , "-dns-port", show dnsPortInt
+                , "-http-port", show httpPortInt -- (fromIntegral consulPort :: Int)
+                , "-grpc-port", show grpcPortInt -- (fromIntegral consulPort :: Int)
+                , "-server-port", show rpcPortInt
+                , "-serf-lan-port", show serfLanPortInt
+                , "-serf-wan-port", show serfWanPortInt
                 , "-config-file", (fromAbsFile configFilePath)
                 ]
   _ <- typedProcessSetupFunc processConfig
-  liftIO $ wait "127.0.0.1" portInt
-  let consulServerHandlePort = fromIntegral portInt
+  liftIO $ wait "127.0.0.1" httpPortInt
+  let consulServerHandleDnsPort = fromIntegral dnsPortInt
+      consulServerHandleGrpcPort = fromIntegral rpcPortInt
+      consulServerHandleHttpPort = fromIntegral httpPortInt
+      consulServerHandleRpcPort = fromIntegral rpcPortInt
+      consulServerHandleSerfLanPort = fromIntegral serfLanPortInt
+      consulServerHandleSerfWanPort = fromIntegral serfWanPortInt
+      consulServerHandleNodeName = Node (pack nodeName) localNodeAddr
   pure ConsulServerHandle {..}

@@ -9,10 +9,10 @@ import Import
 import Test.Syd
 
 spec :: Spec
-spec = setupAroundAll consulServerSetupFunc $ do
+spec = setupAround consulServerSetupFunc $ do
 
-  itWithOuter "testGetServiceHealth" $ \consulServerHandle -> do
-    client@ConsulClient{..} <- newClient $ consulServerHandlePort consulServerHandle 
+  it "testGetServiceHealth" $ \consulServerHandle -> do
+    client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle 
     let req = RegisterService (Just "testGetServiceHealth") "testGetServiceHealth" [] Nothing Nothing
     r1 <- registerService client req
     case r1 of
