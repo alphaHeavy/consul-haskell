@@ -16,7 +16,7 @@ spec = setupAround consulServerSetupFunc $ do
     client@ConsulClient{..} <- newClient consulServerPort
     let req = RegisterService Nothing "testService" ["test"] Nothing (Just $ Ttl "10s")
     val <- registerService client req
-    context "testRegisterService: Service was not created" $ shouldBe val True
+    context "testRegisterService: Service was not created" $ val `shouldBe` True
     mService <- getService client "testService" Nothing
     let serviceWasNotFound = expectationFailure "testRegisterService: Service was not found"
     case mService of
@@ -29,7 +29,7 @@ spec = setupAround consulServerSetupFunc $ do
     client@ConsulClient{..} <- newClient consulServerPort
     let req = RegisterService Nothing "testService" ["test"] Nothing (Just $ Ttl "30s")
     val <- registerService client req
-    context "testDeregisterService: Service was not created" $ shouldBe val True
+    context "testDeregisterService: Service was not created" $ val `shouldBe` True
     deregisterService client (rsName req)
     mService <- getService client (rsName req) Nothing
     case mService of
@@ -41,7 +41,7 @@ spec = setupAround consulServerSetupFunc $ do
     let consulServerPort = consulServerHandleHttpPort consulServerHandle
     client@ConsulClient{..} <- newClient consulServerPort
     x <- getSelf client
-    context "testGetSelf: Self not returned" $ shouldBe True (isJust x)
+    context "testGetSelf: Self not returned" $ (isJust x) `shouldBe` True
 
 
 
