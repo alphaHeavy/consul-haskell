@@ -63,6 +63,7 @@ internalKVTests =
     , testDeleteRecursive
     ]
 
+-- migrated to sydtest
 testGetInvalidKey :: TestTree
 testGetInvalidKey = testCase "testGetInvalidKey" $ do
   client@ConsulClient{..} <- newClient
@@ -70,6 +71,7 @@ testGetInvalidKey = testCase "testGetInvalidKey" $ do
   x <- getKey client{ ccDatacenter = dc1  } "nokey" Nothing Nothing
   assertEqual "testGetInvalidKey: Found a key that doesn't exist" x Nothing
 
+-- migrated to sydtest
 testPutKey :: TestTree
 testPutKey = testCase "testPutKey" $ do
   client@ConsulClient{..} <- newClient
@@ -77,6 +79,7 @@ testPutKey = testCase "testPutKey" $ do
   x <- putKey client put
   assertEqual "testPutKey: Write failed" True x
 
+-- migrated to sydtest
 testPutKeyAcquireLock :: TestTree
 testPutKeyAcquireLock = testCase "testPutKeyAcquireLock" $ do
   client@ConsulClient{..} <- newClient
@@ -100,6 +103,7 @@ testPutKeyAcquireLock = testCase "testPutKeyAcquireLock" $ do
       let Just returnedSession = kvSession kv
       assertEqual "testPutKeyAcquireLock: Session was not found on key" returnedSession (sId session)
 
+-- migrated to sydtest
 testPutKeyReleaseLock :: TestTree
 testPutKeyReleaseLock = testCase "testPutKeyReleaseLock" $ do
   client@ConsulClient{..} <- newClient
@@ -129,6 +133,7 @@ testPutKeyReleaseLock = testCase "testPutKeyReleaseLock" $ do
       assertEqual "testPutKeyAcquireLock: Session still held" Nothing (kvSession kv2)
 
 
+-- migrated to sydtest
 testGetKey :: TestTree
 testGetKey = testCase "testGetKey" $ do
   client@ConsulClient{..} <- newClient
@@ -140,6 +145,7 @@ testGetKey = testCase "testGetKey" $ do
     Just x -> assertEqual "testGetKey: Incorrect Value" (kvValue x) (Just "Test")
     Nothing -> assertFailure "testGetKey: No value returned"
 
+-- migrated to sydtest
 testGetNullValueKey :: TestTree
 testGetNullValueKey = testCase "testGetNullValueKey" $ do
   client@ConsulClient{..} <- newClient
@@ -152,6 +158,7 @@ testGetNullValueKey = testCase "testGetNullValueKey" $ do
     Just x -> assertEqual "testGetNullValueKey: Incorrect Value" (kvValue x) Nothing
     Nothing -> assertFailure "testGetNullValueKey: No value returned"
 
+-- migrated to sydtest
 testGetKeys :: TestTree
 testGetKeys = testCase "testGetKeys" $ do
   client@ConsulClient{..} <- newClient
@@ -164,6 +171,7 @@ testGetKeys = testCase "testGetKeys" $ do
   x3 <- getKeys client "/testGetKeys" Nothing Nothing
   assertEqual "testGetKeys: Incorrect number of results" 2 (length x3)
 
+-- migrated to sydtest
 testListKeys :: TestTree
 testListKeys = testCase "testListKeys" $ do
   client@ConsulClient{..} <- newClient
@@ -176,6 +184,7 @@ testListKeys = testCase "testListKeys" $ do
   x3 <- listKeys client "/testListKeys/" Nothing Nothing
   assertEqual "testListKeys: Incorrect number of results" 2 (length x3)
 
+-- migrated to sydtest
 testDeleteKey :: TestTree
 testDeleteKey = testCase "testDeleteKey" $ do
   client@ConsulClient{..} <- newClient
@@ -187,6 +196,7 @@ testDeleteKey = testCase "testDeleteKey" $ do
   x3 <- getKey client "/testDeleteKey" Nothing Nothing
   assertEqual "testDeleteKey: Key was not deleted" Nothing x3
 
+-- migrated to sydtest
 testDeleteRecursive :: TestTree
 testDeleteRecursive = testCase "testDeleteRecursive" $ do
   client@ConsulClient{..} <- newClient
@@ -204,6 +214,7 @@ testDeleteRecursive = testCase "testDeleteRecursive" $ do
 clientKVTests :: TestTree
 clientKVTests = testGroup "Client KV Tests" [testDeleteRecursiveClient]
 
+-- migrated to sydtest
 testDeleteRecursiveClient :: TestTree
 testDeleteRecursiveClient = testCase "testDeleteRecursiveClient" $ do
   client <- newClient
@@ -218,6 +229,7 @@ testDeleteRecursiveClient = testCase "testDeleteRecursiveClient" $ do
   assertEqual "testDeleteKey: Key was not deleted" Nothing x3
 
 {- Agent -}
+-- migrated to sydtest
 testRegisterService :: TestTree
 testRegisterService = testCase "testRegisterService" $ do
   client@ConsulClient{..} <- newClient
@@ -231,6 +243,7 @@ testRegisterService = testCase "testRegisterService" $ do
     Nothing -> serviceWasNotFound
     Just _ -> return ()
 
+-- migrated to sydtest
 testDeregisterService :: TestTree
 testDeregisterService = testCase "testDeregisterService" $ do
   client@ConsulClient{..} <- newClient
@@ -244,6 +257,7 @@ testDeregisterService = testCase "testDeregisterService" $ do
     Nothing -> return ()
     Just s -> assertFailure $ "testDeregisterService: Service was found... " <> show s
 
+-- migrated to sydtest
 testGetSelf :: TestTree
 testGetSelf = testCase "testGetSelf" $ do
   client@ConsulClient{..} <- newClient
