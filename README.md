@@ -4,6 +4,21 @@
 
 This package is a work-in-progress, but much of the functionality works.
 
+## WIP
+
+* (~) convert testsuite to sydtest
+  * (/) blocked on `thread blocked indefinitely in an MVar operation`
+  * (/) consul started on random port within range, and that port is used during tests
+  * (/) run multiple instances of consul in parallel for different specs (reduce pollution)
+  * (x) testsuite sometimes hangs due to consul server
+  * (x) use generators to produce random values used in tests
+  * (x) how to separate the variable "time to launch consul" with the "time to run test"
+  * (x) convert remaining tests from existing testsuite --> sydtest
+  * (x) drop the old testsuite
+* (x) use TDD to add support for portions of consul API not yet supported
+* (x) setup and use coverage to expand test suite to implemented-but-not-tested
+* (x) ask about re-exporting qualified imports and why isJust isn't seen
+
 ## API Status Matrix
 
 Here's a matrix with the status of support for each of Consul's APIs.
