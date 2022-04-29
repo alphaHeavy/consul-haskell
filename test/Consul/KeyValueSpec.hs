@@ -9,10 +9,13 @@ module Consul.KeyValueSpec where
 
 import Import
 
+import Test.Syd (modifyMaxSuccess)
+import Test.Syd.Validity
+import Data.GenValidity.ByteString --()
 import Data.Text (pack)
 
 spec :: Spec
-spec = setupAround consulServerSetupFunc $ do
+spec = setupAround consulServerSetupFunc $ modifyMaxSuccess (`div` 20) $ do
 
   it "Get Invalid Key" $ \consulServerHandle -> do
     client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
@@ -20,11 +23,12 @@ spec = setupAround consulServerSetupFunc $ do
     x <- getKey client{ ccDatacenter = dc1  } "nokey" Nothing Nothing
     context "testGetInvalidKey: Found a key that doesn't exist" $ x `shouldBe` Nothing
 
-  it "testPutKey" $ \consulServerHandle -> do
-    client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
-    let put = KeyValuePut "/testPutKey" "test" Nothing Nothing
-    x <- putKey client put
-    context "testPutKey: Write failed" $ x `shouldBe` True
+  it "testPutKey" $ \consulServerHandle ->
+    forAllValid $ \keyContents -> do
+      client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
+      let put = KeyValuePut "/testPutKey" keyContents Nothing Nothing
+      x <- putKey client put
+      context "testPutKey: Write failed" $ x `shouldBe` True
 
   it "testPutKeyAcquireLock" $ \consulServerHandle -> do
     client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle

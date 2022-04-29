@@ -58,6 +58,9 @@ tests:
       - base >= 4.7 && < 5
       - bytestring
       - consul-haskell
+      - genvalidity-bytestring
+      - genvalidity-sydtest
+      - genvalidity-text
       - http-client
       - network
       - path

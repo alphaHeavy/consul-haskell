@@ -4,25 +4,29 @@
 module Consul.ServiceSpec (spec) where
 
 import Import
--- why isn't isJust coming from the import in Import?
 import Data.Maybe (isJust)
 
-spec :: Spec
-spec = setupAround consulServerSetupFunc $ do
+import Test.Syd (modifyMaxSuccess)
+import Test.Syd.Validity
+import Data.GenValidity.Text --()
 
-  it "testRegisterService" $ \consulServerHandle -> do
-    let consulServerPort = consulServerHandleHttpPort consulServerHandle
-    let consulServerPort = consulServerHandleHttpPort consulServerHandle
-    client@ConsulClient{..} <- newClient consulServerPort
-    let req = RegisterService Nothing "testService" ["test"] Nothing (Just $ Ttl "10s")
-    val <- registerService client req
-    context "testRegisterService: Service was not created" $ val `shouldBe` True
-    mService <- getService client "testService" Nothing
-    let serviceWasNotFound = expectationFailure "testRegisterService: Service was not found"
-    case mService of
-      Just [] -> serviceWasNotFound
-      Nothing -> serviceWasNotFound
-      Just _ -> return ()
+spec :: Spec
+spec = setupAround consulServerSetupFunc $ modifyMaxSuccess (`div` 20) $ do
+
+  it "testRegisterService" $ \consulServerHandle ->
+    forAllValid $ \serviceName -> do
+      let consulServerPort = consulServerHandleHttpPort consulServerHandle
+      let consulServerPort = consulServerHandleHttpPort consulServerHandle
+      client@ConsulClient{..} <- newClient consulServerPort
+      let req = RegisterService Nothing "testService" [serviceName] Nothing (Just $ Ttl "10s")
+      val <- registerService client req
+      context "testRegisterService: Service was not created" $ val `shouldBe` True
+      mService <- getService client "testService" Nothing
+      let serviceWasNotFound = expectationFailure "testRegisterService: Service was not found"
+      case mService of
+        Just [] -> serviceWasNotFound
+        Nothing -> serviceWasNotFound
+        Just _ -> return ()
 
   it "testDeregisterService" $ \consulServerHandle -> do
     let consulServerPort = consulServerHandleHttpPort consulServerHandle
