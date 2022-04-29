@@ -195,7 +195,13 @@ consulServerSetupFunc = do
                 ]
   -- run consul!
   _ <- typedProcessSetupFunc processConfig
+  -- wait until consul is listening on all ports we've provided it
+  liftIO $ wait "127.0.0.1" dnsPortInt
   liftIO $ wait "127.0.0.1" httpPortInt
+  liftIO $ wait "127.0.0.1" grpcPortInt
+  liftIO $ wait "127.0.0.1" rpcPortInt
+  liftIO $ wait "127.0.0.1" serfLanPortInt
+  liftIO $ wait "127.0.0.1" serfWanPortInt
   -- create our handle data structure, which is passed to tests this setupFunc wraps
   let consulServerHandleDnsPort = fromIntegral dnsPortInt
       consulServerHandleGrpcPort = fromIntegral rpcPortInt
