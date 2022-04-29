@@ -12,6 +12,7 @@ import Import
 import Test.Syd (modifyMaxSuccess)
 import Test.Syd.Validity
 import Data.GenValidity.ByteString --()
+import Data.GenValidity.Text --()
 import Data.Text (pack)
 
 spec :: Spec
@@ -30,28 +31,29 @@ spec = setupAround consulServerSetupFunc $ modifyMaxSuccess (`div` 20) $ do
       x <- putKey client put
       context "testPutKey: Write failed" $ x `shouldBe` True
 
-  it "testPutKeyAcquireLock" $ \consulServerHandle -> do
-    client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
-    let nodeName = consulServerHandleNodeName consulServerHandle
-        ttl = "30s"
-        req =
-          SessionRequest
-            lockDelay
-            (Just "testPutKeyAcquireLock")
-            nodeName
-            checkIds
-            (Just Release)
-            (Just ttl)
-    result <- createSession client req
-    case result of
-      Nothing -> expectationFailure "testPutKeyAcquireLock: No session was created"
-      Just session -> do
-        let put = KeyValuePut "/testPutKeyAcquireLock" "Test" Nothing Nothing
-        x <- putKeyAcquireLock client put session
-        context "testPutKeyAcquireLock: Write failed" $ x `shouldBe` True
-        Just kv <- getKey client "/testPutKeyAcquireLock" Nothing Nothing
-        let Just returnedSession = kvSession kv
-        context "testPutKeyAcquireLock: Session was not found on key" $ returnedSession `shouldBe` (sId session)
+  it "testPutKeyAcquireLock" $ \consulServerHandle ->
+    forAllValid $ \keyName -> do
+      client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
+      let nodeName = consulServerHandleNodeName consulServerHandle
+          ttl = "30s"
+          req =
+            SessionRequest
+              lockDelay
+              (Just "testPutKeyAcquireLock")
+              nodeName
+              checkIds
+              (Just Release)
+              (Just ttl)
+      result <- createSession client req
+      case result of
+        Nothing -> expectationFailure "testPutKeyAcquireLock: No session was created"
+        Just session -> do
+          let put = KeyValuePut ("/" <> keyName) "Test" Nothing Nothing
+          x <- putKeyAcquireLock client put session
+          context "testPutKeyAcquireLock: Write failed" $ x `shouldBe` True
+          Just kv <- getKey client ("/" <> keyName) Nothing Nothing
+          let Just returnedSession = kvSession kv
+          context "testPutKeyAcquireLock: Session was not found on key" $ returnedSession `shouldBe` (sId session)
 
 
   it "testPutKeyReleaseLock" $ \consulServerHandle -> do
