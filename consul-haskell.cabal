@@ -81,6 +81,7 @@ test-suite sydtest-testsuite
   other-modules:
       Consul.HealthCheckSpec
       Consul.KeyValueSpec
+      Consul.ServiceSpec
       Consul.SessionSpec
       Import
       SocketUtils
