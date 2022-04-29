@@ -174,6 +174,7 @@ consulServerSetupFunc = do
     "consul-test-config"
     "{ \"disable_update_check\": true }"
   let nodeName = ((unpack localhost) <> "-" <> (show httpPortInt)) -- hardcode node name as "localhost" * see below
+  -- setup process for "how to run consul"
   let processConfig =
         setStdout nullStream $
           setStderr nullStream $
@@ -192,8 +193,10 @@ consulServerSetupFunc = do
                 , "-serf-wan-port", show serfWanPortInt
                 , "-config-file", (fromAbsFile configFilePath)
                 ]
+  -- run consul!
   _ <- typedProcessSetupFunc processConfig
   liftIO $ wait "127.0.0.1" httpPortInt
+  -- create our handle data structure, which is passed to tests this setupFunc wraps
   let consulServerHandleDnsPort = fromIntegral dnsPortInt
       consulServerHandleGrpcPort = fromIntegral rpcPortInt
       consulServerHandleHttpPort = fromIntegral httpPortInt
