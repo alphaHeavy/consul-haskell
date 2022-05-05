@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Util
   ( ConsulServerHandle (..)
@@ -23,6 +24,7 @@ module Util
 import qualified Data.ByteString.Char8 as BS8
 import qualified System.Process.Typed as PT
 
+import Prelude (Double, Int, IO, Maybe(..), ceiling, error, fromIntegral, not, pure, return, show, ($), (*), (++), (<>), (>>))
 import Control.Concurrent
 import Control.Monad (when)
 import Control.Retry
