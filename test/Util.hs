@@ -29,6 +29,11 @@ import Control.Concurrent
 import Control.Monad (when)
 import Control.Retry
 import Data.Text (pack, unpack, Text)
+import Data.ByteString (concat)
+import Data.ByteString.Lazy (fromStrict)
+import Data.ByteString.Base64.Lazy (decode)
+import Network.HTTP.Client (brConsume, parseUrlThrow, responseBody, withResponse)
+import Network.HTTP.Client.TLS (newTlsManager)
 import Network.Socket (PortNumber)
 import SocketUtils (isPortOpen, simpleSockAddr)
 import System.IO (hFlush)
@@ -204,12 +209,22 @@ consulServerSetupFunc = do
   liftIO $ wait "127.0.0.1" rpcPortInt
   liftIO $ wait "127.0.0.1" serfLanPortInt
   liftIO $ wait "127.0.0.1" serfWanPortInt
-  -- create our handle data structure, which is passed to tests this setupFunc wraps
-  let consulServerHandleDnsPort = fromIntegral dnsPortInt
-      consulServerHandleGrpcPort = fromIntegral rpcPortInt
-      consulServerHandleHttpPort = fromIntegral httpPortInt
-      consulServerHandleRpcPort = fromIntegral rpcPortInt
-      consulServerHandleSerfLanPort = fromIntegral serfLanPortInt
-      consulServerHandleSerfWanPort = fromIntegral serfWanPortInt
-      consulServerHandleNodeName = Node (pack nodeName) localNodeAddr
-  pure ConsulServerHandle {..}
+  -- ping consul to make sure leadership has settled and agent is ready for work
+  let consulStatusUrl = "http://localhost:" <> (pack $ show httpPortInt) <> "/v1/status/leader"
+  initReq <- liftIO $ parseUrlThrow $ unpack $ consulStatusUrl
+  manager <- liftIO $ newTlsManager -- emptyHttpManager
+  liftIO $ withResponse initReq manager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = concat bodyParts
+    let decodedResponse = decode $ fromStrict body
+    case decodedResponse of
+      _ -> do
+          -- create our handle data structure, which is passed to tests this setupFunc wraps
+          let consulServerHandleDnsPort = fromIntegral dnsPortInt
+              consulServerHandleGrpcPort = fromIntegral rpcPortInt
+              consulServerHandleHttpPort = fromIntegral httpPortInt
+              consulServerHandleRpcPort = fromIntegral rpcPortInt
+              consulServerHandleSerfLanPort = fromIntegral serfLanPortInt
+              consulServerHandleSerfWanPort = fromIntegral serfWanPortInt
+              consulServerHandleNodeName = Node (pack nodeName) localNodeAddr
+          pure ConsulServerHandle {..}
