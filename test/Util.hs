@@ -28,10 +28,10 @@ import Prelude (Bool(..), Double, Either(..), Int, IO, Maybe(..), ceiling, error
 import Control.Concurrent
 import Control.Monad (when)
 import Control.Retry
-import Data.Text (pack, unpack, Text)
 import Data.ByteString (concat)
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Base64.Lazy (decode)
+import Data.Text (pack, unpack, Text)
 import Network.HTTP.Client (brConsume, parseUrlThrow, responseBody, withResponse)
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.Socket (PortNumber)
