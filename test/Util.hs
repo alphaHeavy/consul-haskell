@@ -7,12 +7,12 @@ module Util
   ( ConsulServerHandle (..)
   , checkIds
   , consulPort
-  , consulServerSetupFunc 
+  , consulServerSetupFunc
   , dc1
   , fiveSecondMicros
   , newClient
   , withProcessTerm
-  , waitForConsulOrFail 
+  , waitForConsulOrFail
   , sleep
   , localhost
   , localNode
@@ -173,7 +173,7 @@ data ConsulServerHandle = ConsulServerHandle
   , consulServerHandleNodeName :: !Node
   }
 
-consulServerSetupFunc :: SetupFunc ConsulServerHandle 
+consulServerSetupFunc :: SetupFunc ConsulServerHandle
 consulServerSetupFunc = do
   tempDir <- tempDirSetupFunc "consul-server"
   dnsPortInt <- liftIO getFreePort
