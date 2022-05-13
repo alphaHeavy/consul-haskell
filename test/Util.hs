@@ -24,7 +24,7 @@ module Util
 import qualified Data.ByteString.Char8 as BS8
 import qualified System.Process.Typed as PT
 
-import Prelude (Double, Int, IO, Maybe(..), ceiling, error, fromIntegral, not, pure, return, show, ($), (*), (++), (<>), (>>))
+import Prelude (Bool(..), Double, Either(..), Int, IO, Maybe(..), ceiling, error, fromIntegral, not, print, pure, return, show, ($), (*), (++), (<>), (>>), (.), (==), const, undefined)
 import Control.Concurrent
 import Control.Monad (when)
 import Control.Retry
@@ -39,6 +39,11 @@ import SocketUtils (isPortOpen, simpleSockAddr)
 import System.IO (hFlush)
 import System.Process.Typed (proc, setWorkingDir, nullStream, setStderr, setStdout)
 import UnliftIO.Temporary (withSystemTempFile)
+
+-- for consul leadership query
+import Data.Aeson as JSON
+import Network.HTTP.Client (httpLbs, responseStatus)
+import Network.HTTP.Types (ok200)
 
 import Network.Consul.Internal
 import Network.Consul.Types
@@ -210,21 +215,51 @@ consulServerSetupFunc = do
   liftIO $ wait "127.0.0.1" serfLanPortInt
   liftIO $ wait "127.0.0.1" serfWanPortInt
   -- ping consul to make sure leadership has settled and agent is ready for work
-  let consulStatusUrl = "http://localhost:" <> (pack $ show httpPortInt) <> "/v1/status/leader"
-  initReq <- liftIO $ parseUrlThrow $ unpack $ consulStatusUrl
-  manager <- liftIO $ newTlsManager -- emptyHttpManager
-  liftIO $ withResponse initReq manager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = concat bodyParts
-    let decodedResponse = decode $ fromStrict body
-    case decodedResponse of
-      _ -> do
-          -- create our handle data structure, which is passed to tests this setupFunc wraps
-          let consulServerHandleDnsPort = fromIntegral dnsPortInt
-              consulServerHandleGrpcPort = fromIntegral rpcPortInt
-              consulServerHandleHttpPort = fromIntegral httpPortInt
-              consulServerHandleRpcPort = fromIntegral rpcPortInt
-              consulServerHandleSerfLanPort = fromIntegral serfLanPortInt
-              consulServerHandleSerfWanPort = fromIntegral serfWanPortInt
-              consulServerHandleNodeName = Node (pack nodeName) localNodeAddr
-          pure ConsulServerHandle {..}
+  liftIO $ waitForLeadership httpPortInt
+
+  -- create our handle data structure, which is passed to tests this setupFunc wraps
+  let consulServerHandleDnsPort = fromIntegral dnsPortInt
+      consulServerHandleGrpcPort = fromIntegral rpcPortInt
+      consulServerHandleHttpPort = fromIntegral httpPortInt
+      consulServerHandleRpcPort = fromIntegral rpcPortInt
+      consulServerHandleSerfLanPort = fromIntegral serfLanPortInt
+      consulServerHandleSerfWanPort = fromIntegral serfWanPortInt
+      consulServerHandleNodeName = Node (pack nodeName) localNodeAddr
+  pure ConsulServerHandle {..}
+
+-- Block while we wait for the Consul agent to acquire leader status.
+--
+-- After the Consul agent starts and has opened the TCP ports it will listen on,
+-- the agent needs an unknown amount of time to sort out its internal raft
+-- consensus and acquire leader status. If we run fast and try to query the
+-- agent before it has an active leader, our queries will fail with HTTP 500, No
+-- Cluster Leader. This function blocks while we wait for that process to
+-- complete.
+waitForLeadership :: Int -> IO ()
+waitForLeadership consulPort = do
+  ready <- queryLeadershipWithRetries consulPort
+  if ready then pure () else expectationFailure "Exceeded retry limits waiting for consul leader"
+
+-- Repeatedly query the Consul agent's leader status API until that query is
+-- successful. Retry 100 times with a 50ms pause between retries.
+queryLeadershipWithRetries :: Int -> IO Bool
+queryLeadershipWithRetries consulPort =
+  retrying
+      (constantDelay 50000 <> limitRetries 100) -- 100 times, 50 ms each
+      (const $ pure . not)
+      (const $ queryLeadershipOnce consulPort)
+
+
+-- Query the Consul agent's leader status API once, parsing the response and
+-- failing if we cannot decode the JSON response and if we don't see ah HTTP
+-- 200 response code.
+queryLeadershipOnce :: Int -> IO Bool
+queryLeadershipOnce consulPort = do
+  let consulStatusUrl = "http://localhost:" <> (pack $ show consulPort) <> "/v1/status/leader"
+  request <- parseUrlThrow $ unpack $ consulStatusUrl
+  manager <- newTlsManager -- emptyHttpManager
+  response <- httpLbs request manager
+  case JSON.decode $ responseBody response :: Maybe Text of
+    Nothing -> expectationFailure "could not decode the json"
+    Just _ -> do
+      pure $ responseStatus response == ok200

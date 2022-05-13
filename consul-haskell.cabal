@@ -91,13 +91,17 @@ test-suite sydtest-testsuite
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , base64-bytestring
     , bytestring
     , consul-haskell
     , genvalidity-bytestring
     , genvalidity-sydtest
     , genvalidity-text
     , http-client
+    , http-client-tls
+    , http-types
     , network
     , path
     , path-io

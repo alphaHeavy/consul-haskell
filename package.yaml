@@ -55,13 +55,17 @@ tests:
       - -with-rtsopts=-N
       - -Wall
     dependencies:
+      - aeson
       - base >= 4.7 && < 5
+      - base64-bytestring
       - bytestring
       - consul-haskell
       - genvalidity-bytestring
       - genvalidity-sydtest
       - genvalidity-text
       - http-client
+      - http-client-tls
+      - http-types
       - network
       - path
       - path-io
