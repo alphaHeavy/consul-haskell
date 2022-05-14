@@ -48,10 +48,10 @@ spec = setupAround consulServerSetupFunc $ modifyMaxSuccess (`div` 20) $ do
       case result of
         Nothing -> expectationFailure "testPutKeyAcquireLock: No session was created"
         Just session -> do
-          let put = KeyValuePut ("/" <> keyName) "Test" Nothing Nothing
+          let put = KeyValuePut keyName "Test" Nothing Nothing
           x <- putKeyAcquireLock client put session
           context "testPutKeyAcquireLock: Write failed" $ x `shouldBe` True
-          Just kv <- getKey client ("/" <> keyName) Nothing Nothing
+          Just kv <- getKey client keyName Nothing Nothing
           let Just returnedSession = kvSession kv
           context "testPutKeyAcquireLock: Session was not found on key" $ returnedSession `shouldBe` (sId session)
 
