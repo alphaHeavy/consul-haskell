@@ -155,7 +155,7 @@ instance IsString KeyPath where
 @since 0.1.0
 -}
 data KeyValuePut = KeyValuePut {
-  kvpKey :: Text,
+  kvpKey :: KeyPath,
   kvpValue :: ByteString,
   kvpCasIndex :: Maybe Word64,
   kvpFlags :: Maybe Word64
@@ -218,7 +218,7 @@ data SessionRequest = SessionRequest {
 @since 0.0.0.0
 -}
 data Sequencer = Sequencer{
-  sKey :: Text,
+  sKey :: KeyPath,
   sLockIndex :: Word64,
   sSession :: Session
 } deriving (Eq, Ord, Show)

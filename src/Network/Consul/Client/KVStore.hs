@@ -27,6 +27,7 @@ import Import
 import qualified Data.ByteString as B (concat) 
 import qualified Data.ByteString.Lazy as BL (fromStrict)
 import qualified Data.Text as T (concat, empty, pack, intercalate)
+import Network.Consul.Types (KeyPath(..))
  
 {- | Delete Key
 
@@ -65,7 +66,7 @@ TODO: Document
 -}
 getKey
   :: MonadIO m => ConsulClient -- ^
-  -> Text -- ^
+  -> KeyPath -- ^
   -> Maybe Word64 -- ^
   -> Maybe Consistency -- ^
   -> m (Maybe KeyValue) -- ^
@@ -73,7 +74,7 @@ getKey _client@ConsulClient{..} key index consistency = do
   let hostnameWithScheme = hostWithScheme _client
   request <- createRequest hostnameWithScheme
                            ccPort
-                           (T.concat ["/v1/kv/",key])
+                           (T.concat ["/v1/kv/",(unKeyPath key)])
                            fquery
                            Nothing
                            (isJust index)
@@ -175,7 +176,7 @@ putKey _client@ConsulClient{..} putRequest = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
                            ccPort
-                           (T.concat ["/v1/kv/", kvpKey putRequest])
+                           (T.concat ["/v1/kv/", unKeyPath $ kvpKey putRequest])
                            fquery
                            (Just $ kvpValue putRequest)
                            False
@@ -210,7 +211,7 @@ putKeyAcquireLock _client@ConsulClient{..} request (Session session _) = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
                            ccPort
-                           (T.concat ["/v1/kv/", kvpKey request])
+                           (T.concat ["/v1/kv/", unKeyPath $ kvpKey request])
                            fquery
                            (Just $ kvpValue request)
                            False
@@ -246,7 +247,7 @@ putKeyReleaseLock _client@ConsulClient{..} request (Session session _) = do
   let hostnameWithScheme = hostWithScheme _client
   initReq <- createRequest hostnameWithScheme
                            ccPort
-                           (T.concat ["/v1/kv/", kvpKey request])
+                           (T.concat ["/v1/kv/", unKeyPath $ kvpKey request])
                            fquery
                            (Just $ kvpValue request)
                            False

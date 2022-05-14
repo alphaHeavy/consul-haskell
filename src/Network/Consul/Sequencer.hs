@@ -15,7 +15,7 @@ import Import
 import Network.Consul.Client.KVStore
 
 -- | TODO: Document
-getSequencerForLock :: MonadIO m => ConsulClient -> Text -> Session -> m (Maybe Sequencer)
+getSequencerForLock :: MonadIO m => ConsulClient -> KeyPath -> Session -> m (Maybe Sequencer)
 getSequencerForLock client key session = do
   kv <- getKey client key Nothing (Just Consistent)
   case kv of
