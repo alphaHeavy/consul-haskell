@@ -13,7 +13,17 @@ import Test.Syd (modifyMaxSuccess)
 import Test.Syd.Validity
 import Data.GenValidity.ByteString --()
 import Data.GenValidity.Text --()
-import Data.Text (pack)
+import Data.Text (pack, null)
+
+
+instance GenValid KeyPath
+
+instance Validity KeyPath where
+  validate kp@KeyPath{..} =
+    mconcat
+      [ genericValidate kp
+      , declare "it is not empty" $ not $ Data.Text.null unKeyPath
+      ]
 
 spec :: Spec
 spec = setupAround consulServerSetupFunc $ modifyMaxSuccess (`div` 20) $ do
