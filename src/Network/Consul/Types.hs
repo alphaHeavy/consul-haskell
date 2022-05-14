@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -19,6 +20,7 @@ module Network.Consul.Types (
   HealthCheck(..),
   HealthCheckStatus(..),
   Network.Consul.Types.KeyValue(..),
+  KeyPath(..),
   KeyValuePut(..),
   Member(..),
   Node(..),
@@ -56,9 +58,10 @@ import Data.Int
 import Data.Text (Text)
 import qualified Data.Text.Encoding as TE
 import Data.Word
+import GHC.Generics (Generic)
 import Network.HTTP.Client (Manager)
 import Network.Socket
-
+import Data.String (IsString(..))
 
 {- | Represents a Consul Client.
 
@@ -140,6 +143,12 @@ data KeyValue = KeyValue {
   kvKey :: Text
 } deriving (Eq, Ord, Show)
 
+newtype KeyPath = KeyPath
+  { unKeyPath :: Text
+  } deriving (Eq, Ord, Show, Generic)
+
+instance IsString KeyPath where
+  fromString = KeyPath . fromString
 
 {- | Represents a KV being written (PUT) to the Consul KV.
 
