@@ -217,6 +217,10 @@ consulServerSetupFunc = do
   -- ping consul to make sure leadership has settled and agent is ready for work
   liftIO $ waitForLeadership httpPortInt
 
+  -- TODO: enabling this block until node registration is complete kills the testsuite
+  -- in one iteration.. cannot run continuously.
+  --liftIO $ waitForNodeRegistration httpPortInt
+
   -- create our handle data structure, which is passed to tests this setupFunc wraps
   let consulServerHandleDnsPort = fromIntegral dnsPortInt
       consulServerHandleGrpcPort = fromIntegral rpcPortInt
@@ -226,6 +230,54 @@ consulServerSetupFunc = do
       consulServerHandleSerfWanPort = fromIntegral serfWanPortInt
       consulServerHandleNodeName = Node (pack nodeName) localNodeAddr
   pure ConsulServerHandle {..}
+
+-- Block while we wait for the Consul agent to have itself registered as a node
+-- in the consul cluster.
+--
+-- This is to address test failures due to the following situation:
+-- ... [ERROR] agent.http: Request error: method=PUT
+--                                        url=/v1/session/create
+--                                        from=127.0.0.1:54248
+--                                        error="Missing node registration"
+--
+-- After the Consul agent acquires leadership in the cluster, there is then
+-- an unknown amount of time where no nodes are registered in the cluster,
+-- and we need to delay our tests from running until there is a registered
+-- node.  This function blocks while we wait for that process to complete.
+waitForNodeRegistration :: Int -> IO ()
+waitForNodeRegistration consulPort = do
+  ready <- queryNodeRegistrationWithRetries consulPort
+  if ready then pure () else expectationFailure "Exceeded retry limits waiting for node registration"
+
+-- Repeatedly query the Consul agent's node catalog API until we see a Node
+-- registered in the catalog. Retry 100 times with a 50ms pause between retries.
+queryNodeRegistrationWithRetries :: Int -> IO Bool
+queryNodeRegistrationWithRetries consulPort =
+  retrying
+      (constantDelay 50000 <> limitRetries 100) -- 100 times, 50 ms each
+      (const $ pure . not)
+      (const $ queryNodeRegistrationOnce consulPort)
+
+-- Query the Consul Node Catalog API once, parsing the response and
+-- failing with expectationFailure if we cannot decode the JSON response.
+-- Return False if the list of nodes is empty. Return True if there are
+-- entries and the Http response code was 200.
+queryNodeRegistrationOnce :: Int -> IO Bool
+queryNodeRegistrationOnce consulPort = do
+  let consulNodeCatalogUrl = "http://localhost:" <> (pack $ show consulPort) <> "/v1/catalog/nodes"
+  request <- parseUrlThrow $ unpack $ consulNodeCatalogUrl
+  manager <- newTlsManager
+  response <- httpLbs request manager
+  --liftIO $ print $ responseBody response
+  case JSON.decode $ responseBody response :: Maybe Text of
+    Nothing -> expectationFailure "node registration check: could not decode the json response"
+    Just nodeList -> do
+      --liftIO $ print ("JSON response from consul node catalog API: " <> nodeList)
+      case nodeList of
+        "" -> pure False
+        nodes -> do
+          pure $ responseStatus response == ok200
+
 
 -- Block while we wait for the Consul agent to acquire leader status.
 --
@@ -250,9 +302,14 @@ queryLeadershipWithRetries consulPort =
       (const $ queryLeadershipOnce consulPort)
 
 
+-- TODO: how do we test this to confirm it's not flawed?
+--
+-- TODO: should this also ensure the node registration is complete? Or is that
+--       another function entirely?
+--
 -- Query the Consul agent's leader status API once, parsing the response and
 -- failing if we cannot decode the JSON response and if we don't see ah HTTP
--- 200 response code.
+-- 200 response code. Return expectationFailure on fail or True on success.
 queryLeadershipOnce :: Int -> IO Bool
 queryLeadershipOnce consulPort = do
   let consulStatusUrl = "http://localhost:" <> (pack $ show consulPort) <> "/v1/status/leader"
@@ -260,6 +317,7 @@ queryLeadershipOnce consulPort = do
   manager <- newTlsManager -- emptyHttpManager
   response <- httpLbs request manager
   case JSON.decode $ responseBody response :: Maybe Text of
-    Nothing -> expectationFailure "could not decode the json"
-    Just _ -> do
+    Nothing -> expectationFailure "leadership check: could not decode the json"
+    Just msg -> do
+      --liftIO $ print ("JSON response from consul leader: " <> msg)
       pure $ responseStatus response == ok200
