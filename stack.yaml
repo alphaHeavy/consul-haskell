@@ -69,7 +69,7 @@ extra-deps:
       - autodocodec-schema
 
 # When bumping the resolver, update the GHC version in shell.nix accordingly.
-resolver: lts-18.20
+resolver: lts-18.21
 
 nix:
   enable: true
