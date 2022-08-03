@@ -73,7 +73,7 @@ resolver: lts-18.20
 
 nix:
   enable: true
-  packages: [ zlib ]
+  packages: [ zlib consul ]
 
 #nix:
 #  shell-file: shell.nix
