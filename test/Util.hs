@@ -150,7 +150,7 @@ withConsulServer app = do
     BS8.hPutStrLn h "{ \"disable_update_check\": true }" >> hFlush h
     let consulProc =
           proc
-            "/home/user/bin/consul"
+            "consul"
             [ "agent", "-dev"
             , "-node", (unpack localhost) -- hardcode node name as "localhost" * see below
             , "-log-level", "err"
@@ -206,7 +206,7 @@ consulServerSetupFunc = do
           setStderr nullStream $
             setWorkingDir (fromAbsDir tempDir) $
               proc
-                "/home/user/bin/consul"
+                "consul"
                 [ "agent", "-dev"
                 , "-node", nodeName
                 , "-log-level", "err"
