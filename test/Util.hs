@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NoImplicitPrelude #-}
@@ -24,14 +25,15 @@ module Util
 import qualified Data.ByteString.Char8 as BS8
 import qualified System.Process.Typed as PT
 
-import Prelude (Bool(..), Double, Either(..), Int, IO, Maybe(..), ceiling, error, fromIntegral, not, print, pure, return, show, ($), (*), (++), (<>), (>>), (.), (==), const, undefined)
+import Prelude (Bool(..), Double, Either(..), Int, IO, Maybe(..), Show, Eq, ceiling, error, fromIntegral, not, print, pure, return, show, (<*>), (<$>), ($), (*), (++), (<>), (>>), (.), (==), const, undefined)
 import Control.Concurrent
-import Control.Monad (when)
+import Control.Monad (mzero, when)
 import Control.Retry
 import Data.ByteString (concat)
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Base64.Lazy (decode)
 import Data.Text (pack, unpack, Text)
+import GHC.Generics (Generic)
 import Network.HTTP.Client (brConsume, parseUrlThrow, responseBody, withResponse)
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.Socket (PortNumber)
@@ -58,6 +60,18 @@ import Network.Socket.Wait
 --import System.Process.Typed -- (TODO)
 import Path
 import Path.IO
+
+data ConsulCatalogNode =
+  ConsulCatalogNode
+    { consulCatalogNodeName :: Text
+    , consulCatalogNodeAddress :: Text
+    , consulCatalogNodeDatacenter :: Datacenter
+    } deriving (Generic, Show, Eq)
+
+instance FromJSON ConsulCatalogNode where
+  parseJSON (Object o) =
+    ConsulCatalogNode <$> o .: "Node" <*> o .: "Address" <*> o .: "Datacenter"
+  parseJSON _ = mzero
 
 -- 5 seconds.
 fiveSecondMicros :: Int
@@ -219,7 +233,9 @@ consulServerSetupFunc = do
 
   -- TODO: enabling this block until node registration is complete kills the testsuite
   -- in one iteration.. cannot run continuously.
-  --liftIO $ waitForNodeRegistration httpPortInt
+  liftIO $ waitForNodeRegistration httpPortInt
+  -- sleep for 1.5 seconds to allow node registration to happen (crude, but it works..)
+  --liftIO $ threadDelay (ceiling (1.5 * 1e6))
 
   -- create our handle data structure, which is passed to tests this setupFunc wraps
   let consulServerHandleDnsPort = fromIntegral dnsPortInt
@@ -268,13 +284,14 @@ queryNodeRegistrationOnce consulPort = do
   request <- parseUrlThrow $ unpack $ consulNodeCatalogUrl
   manager <- newTlsManager
   response <- httpLbs request manager
+  let body = responseBody response
   --liftIO $ print $ responseBody response
-  case JSON.decode $ responseBody response :: Maybe Text of
-    Nothing -> expectationFailure "node registration check: could not decode the json response"
-    Just nodeList -> do
-      --liftIO $ print ("JSON response from consul node catalog API: " <> nodeList)
-      case nodeList of
-        "" -> pure False
+  case JSON.eitherDecode body of
+    Left e -> expectationFailure $ "node registration check: could not decode the json response: " ++ e ++ (show body)
+    Right nodeList -> do
+      liftIO $ print ("JSON response from consul node catalog API: " <> (show nodeList))
+      case (nodeList :: [ConsulCatalogNode]) of -- TODO switch to ConsulNode
+        [] -> pure False
         nodes -> do
           pure $ responseStatus response == ok200
 
