@@ -76,7 +76,7 @@ getDatacenters client@ConsulClient{..} = liftIO $ do
   withResponse initReq ccManager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
-    let val = (decode $ BL.fromStrict body)
+    let val = decode $ BL.fromStrict body
     case val of
       Just x -> return x
       Nothing -> return []
@@ -133,7 +133,7 @@ getServices _client@ConsulClient{..} tag = do
     parseServices t (Just (Object v)) = filterTags t $ H.toList v
     parseServices _   _               = []
     filterTags :: Maybe Text -> [(Text, Value)] -> [Text]
-    filterTags (Just t)               = map fst . filter (\ (_, (Array v)) -> (String t) `V.elem` v)
+    filterTags (Just t)               = map fst . filter (\ (_, Array v) -> (String t) `V.elem` v)
     filterTags Nothing                = map fst
 
 
