@@ -74,7 +74,7 @@ getKey _client@ConsulClient{..} key index consistency = do
   let hostnameWithScheme = hostWithScheme _client
   request <- createRequest hostnameWithScheme
                            ccPort
-                           (T.concat ["/v1/kv/",(unKeyPath key)])
+                           (T.concat ["/v1/kv/", unKeyPath key])
                            fquery
                            Nothing
                            (isJust index)
@@ -84,7 +84,7 @@ getKey _client@ConsulClient{..} key index consistency = do
       x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         let body = B.concat bodyParts
-        return $ listToMaybe =<< (decode $ BL.fromStrict body)
+        return $ listToMaybe =<< decode (BL.fromStrict body)
       _ -> return Nothing
   where
     cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
