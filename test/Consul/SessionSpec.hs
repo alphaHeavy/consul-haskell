@@ -9,7 +9,7 @@ module Consul.SessionSpec (spec) where
 
 import Import
 
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, isNothing)
 import Data.Text (Text)
 import Data.UUID (UUID, toText)
 import System.Random (randomIO)
@@ -114,7 +114,7 @@ spec = setupAround consulServerSetupFunc $ modifyMaxSuccess (`div` 20) $ do
       Just x -> do
         _ <- destroySession client x
         x1 <- getSessionInfo client x
-        context "testDestroySession: Session info was returned after destruction" $ (x1 == Nothing) || (x1 == Just []) `shouldBe` (True || False)
+        context "testDestroySession: Session info was returned after destruction" $ (isNothing x1) || (x1 == Just []) `shouldBe` (True || False)
       Nothing -> expectationFailure "testDestroySession: No session was created"
 
   it "testSessionMaintained" $ \consulServerHandle -> do
@@ -153,7 +153,7 @@ spec = setupAround consulServerSetupFunc $ modifyMaxSuccess (`div` 20) $ do
         x1 <- withSession client Nothing 5 session (\ y -> action y client ) cancelAction
         context "testWithSessionCancel: Incorrect value" $ x1 `shouldBe` "Canceled"
         z <- getSessionInfo client session
-        context "testWithSessionCancel: Session was found" $ ((z == Nothing) || (z == Just [])) `shouldBe` (True || False)
+        context "testWithSessionCancel: Session was found" $ ((isNothing z) || (z == Just [])) `shouldBe` (True || False)
       Nothing -> expectationFailure "testWithSessionCancel: No session was created"
     where
       action :: MonadIO m => Session -> ConsulClient -> m Text
