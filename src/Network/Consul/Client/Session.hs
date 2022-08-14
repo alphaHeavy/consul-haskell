@@ -146,7 +146,5 @@ withSession client@ConsulClient{..} _ delay session action lostAction = (do
     extendSession = do
       liftIO $ threadDelay (delay * 1000000)
       x <- renewSession client session
-      case x of
-        True -> extendSession
-        False -> lostAction
+      if x then extendSession else lostAction
 
