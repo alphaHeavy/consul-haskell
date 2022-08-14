@@ -69,7 +69,7 @@ createRequest consulHostWithScheme
   where
     needQueryString = if isJust dc || isJust query then "?" else ""
     prefixAnd = if isJust query && isJust dc then "&" else ""
-    indef req = if wait == True then req{responseTimeout = responseTimeoutNone} else req
+    indef req = if wait then req{responseTimeout = responseTimeoutNone} else req
 
 {- |
 Run `T.unpack`, `T.strip` and `Text.Encoding.decoodeUtf8` on a `ByteString` (to get a `String` of course).
