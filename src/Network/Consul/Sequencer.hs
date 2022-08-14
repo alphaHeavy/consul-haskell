@@ -43,6 +43,4 @@ withSequencer client sequencer action lostAction delay =
     pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
       liftIO $ threadDelay delay
       valid <- isValidSequencer client sequencer
-      case valid of
-        True -> pulseLock
-        False -> lostAction
+      if valid then pulseLock else lostAction
