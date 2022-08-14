@@ -589,7 +589,7 @@ instance ToJSON HealthCheck where
 @since 0.0.0.0
 -}
 instance ToJSON SessionRequest where
-  toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= (nNode node), "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
+  toJSON (SessionRequest lockDelay name node checks behavior ttl) = object["LockDelay" .= lockDelay, "Name" .= name, "Node" .= nNode node, "Checks" .= checks, "Behavior" .= behavior, "TTL" .= ttl]
 
 
 {- |
