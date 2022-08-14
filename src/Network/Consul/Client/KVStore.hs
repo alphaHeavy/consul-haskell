@@ -23,10 +23,11 @@ module Network.Consul.Client.KVStore
   , putKeyReleaseLock
   ) where
 
-import Import
 import qualified Data.ByteString as B (concat) 
 import qualified Data.ByteString.Lazy as BL (fromStrict)
 import qualified Data.Text as T (concat, empty, pack, intercalate)
+
+import Import
 import Network.Consul.Types (KeyPath(..))
  
 {- | Delete Key
