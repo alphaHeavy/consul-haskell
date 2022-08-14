@@ -24,7 +24,7 @@ runService client request action = do
 
       --this is here instead of the where to prevent typechecking nastiness
       checkAction <- case rsCheck request of
-                      Just(x@(Ttl _)) -> do
+                      Just x@(Ttl _) -> do
                         a <- async $ forever $ ttlFunc x
                         return $ Just a
                       _ -> return Nothing
@@ -39,7 +39,7 @@ runService client request action = do
     ttlFunc (Http _) = undefined     -- TODO: what should this be instead??
     ttlFunc (Ttl x) = do
       let ttl = parseTtl x
-          floorTtl = (floor (fromIntegral ttl / 2 :: Double))
+          floorTtl = floor (fromIntegral ttl / 2 :: Double)
           delay = (ttl - floorTtl) * 1000000
       -- pause for delay, based on ttl
       liftIO $ threadDelay $ delay
