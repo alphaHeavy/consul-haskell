@@ -8,6 +8,7 @@ module Network.Consul.Misc
   ) where
 
 import Import
+import Data.Foldable (forM_)
 import qualified Data.Text as T (concat)
 
 import Network.Consul.Client.Health
@@ -30,9 +31,7 @@ runService client request action = do
                       _ -> return Nothing
 
       _foo :: () <- wait mainFunc --prevent: 'StM’ is a type function, and may not be injective
-      case checkAction of
-        Just a -> cancel a
-        Nothing -> return ()
+      forM_ checkAction cancel
     False -> return ()
   where
     ttlFunc (Script _ _) = undefined -- TODO: what should this be instead??
