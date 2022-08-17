@@ -9,6 +9,8 @@ module Network.Consul.Misc
 
 import Import
 import Data.Foldable (forM_)
+import Data.Maybe (fromMaybe)
+
 import qualified Data.Text as T (concat)
 
 import Network.Consul.Client.Health
@@ -42,5 +44,5 @@ runService client request action = do
           delay = (ttl - floorTtl) * 1000000
       -- pause for delay, based on ttl
       liftIO $ threadDelay $ delay
-      let checkId = T.concat["service:",maybe (rsName request) id (rsId request)]
+      let checkId = T.concat["service:",fromMaybe (rsName request) (rsId request)]
       passHealthCheck client checkId
