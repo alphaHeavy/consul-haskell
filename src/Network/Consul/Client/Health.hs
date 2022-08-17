@@ -22,6 +22,9 @@ module Network.Consul.Client.Health
   ) where
 
 import Import
+
+import Data.Maybe (fromMaybe)
+
 import qualified Data.ByteString as B (concat) 
 import qualified Data.ByteString.Lazy as BL (toStrict, fromStrict)
 import qualified Data.Text as T (concat, pack, unpack)
@@ -54,7 +57,7 @@ getServiceChecks _client@ConsulClient{..} name = do
   liftIO $ withResponse initReq ccManager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
-    return $ maybe [] id (decode $ BL.fromStrict body)
+    return $ fromMaybe [] (decode $ BL.fromStrict body)
 
 
 {- | 
