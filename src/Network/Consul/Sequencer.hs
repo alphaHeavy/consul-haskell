@@ -20,7 +20,7 @@ getSequencerForLock client key session = do
   kv <- getKey client key Nothing (Just Consistent)
   case kv of
     Just k -> do
-      let isValid = maybe False ((sId session) ==) $ kvSession k
+      let isValid = (Just (sId session) ==) $ kvSession k
       if isValid then return $ Just $ Sequencer key (kvLockIndex k) session else return Nothing
     Nothing -> return Nothing
 
@@ -30,7 +30,7 @@ isValidSequencer :: MonadIO m => ConsulClient -> Sequencer -> m Bool
 isValidSequencer client sequencer = do
   mkv <- getKey client (sKey sequencer) Nothing (Just Consistent)
   case mkv of
-    Just kv -> return $ (maybe False ((sId $ sSession sequencer) ==) $ kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
+    Just kv -> return $ (Just (sId $ sSession sequencer) ==) (kvSession kv) && (kvLockIndex kv) == (sLockIndex sequencer)
     Nothing -> return False
 
 
