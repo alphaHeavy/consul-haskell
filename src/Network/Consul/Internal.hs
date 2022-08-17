@@ -61,7 +61,7 @@ createRequest consulHostWithScheme
               wait
               dc = do
   let baseUrl = T.concat [consulHostWithScheme,":",T.pack $ show portNumber,endpoint,needQueryString
-                         ,maybe "" id query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
+                         ,fromMaybe "" query, prefixAnd, maybe "" (\ (Datacenter x) -> T.concat["dc=",x]) dc]
   initReq <- liftIO $ parseUrlThrow $ T.unpack baseUrl
   case body of
       Just x -> return $ indef $ initReq{ method = "PUT", requestBody = RequestBodyBS x, checkResponse = \ _ _ -> return ()}
