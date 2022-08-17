@@ -10,6 +10,7 @@ module Network.Consul.Sequencer
   , withSequencer
   ) where
 
+import Data.Functor ((<&>))
 import Import
 
 import Network.Consul.Client.KVStore
@@ -38,7 +39,7 @@ isValidSequencer client sequencer = do
 withSequencer :: (MonadMask m, MonadUnliftIO m) => ConsulClient -> Sequencer -> m a -> m a -> Int -> m a
 withSequencer client sequencer action lostAction delay =
   withAsync action $ \ mainAsync -> withAsync pulseLock $ \ pulseAsync -> do
-    waitAnyCancel [mainAsync, pulseAsync] >>= return . snd
+    waitAnyCancel [mainAsync, pulseAsync] <&> snd
   where
     pulseLock = recoverAll (exponentialBackoff 50000 <>  limitRetries 5) $ \ _ -> do
       liftIO $ threadDelay delay
