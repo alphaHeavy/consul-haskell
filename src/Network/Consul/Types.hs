@@ -15,6 +15,8 @@ module Network.Consul.Types (
   Config(..),
   Consistency(..),
   ConsulClient(..),
+  ConsulApiResponseAclBootstrap(..),
+  ConsulApiResponseAclPolicy(..),
   Datacenter (..),
   Health(..),
   HealthCheck(..),
@@ -94,6 +96,48 @@ data Consistency
   | Default -- ^ If not specified, the default is strongly consistent in almost all cases.
   | Stale -- ^ This mode allows any server to service the read, even if it is not the active leader.
   deriving (Bounded, Enum, Eq, Ord, Show)
+
+data ConsulApiResponseAclBootstrap =
+  ConsulApiResponseAclBootstrap
+    { consulApiResponseAclBootstrapAccessorId :: Text
+    , consulApiResponseAclBootstrapSecretID :: Text
+    , consulApiResponseAclBootstrapDescription :: Text
+    , consulApiResponseAclBootstrapPolicies :: [ConsulApiResponseAclPolicy]
+    , consulApiResponseAclBootstrapLocal :: Bool
+    , consulApiResponseAclBootstrapCreateTime :: Text
+    , consulApiResponseAclBootstrapHash :: Text
+    , consulApiResponseAclBootstrapCreateIndex :: Int
+    , consulApiResponseAclBootstrapModifyIndex :: Int
+    } deriving (Generic, Show, Eq)
+
+instance FromJSON ConsulApiResponseAclBootstrap where
+  parseJSON (Object o) =
+    ConsulApiResponseAclBootstrap
+      <$> o .: "AccessorId"
+      <*> o .: "SecretID"
+      <*> o .: "Description"
+      <*> o .: "Policies"
+      <*> o .: "Local"
+      <*> o .: "CreateTime"
+      <*> o .: "Hash"
+      <*> o .: "CreateIndex"
+      <*> o .: "ModifyIndex"
+
+  parseJSON _ = mzero
+
+data ConsulApiResponseAclPolicy =
+  ConsulApiResponseAclPolicy
+    { consulApiResponseAclPolicyId :: Text
+    , consulApiResponseAclPolicyName :: Text  
+    } deriving (Generic, Show, Eq)
+ 
+instance FromJSON ConsulApiResponseAclPolicy where
+  parseJSON (Object o) =
+    ConsulApiResponseAclPolicy
+      <$> o .: "Id"
+      <*> o .: "Name"
+
+  parseJSON _ = mzero
 
 
 {- | Represents Consul's Health Check Status
