@@ -43,6 +43,6 @@ runService client request action = do
           floorTtl = floor (fromIntegral ttl / 2 :: Double)
           delay = (ttl - floorTtl) * 1000000
       -- pause for delay, based on ttl
-      liftIO $ threadDelay $ delay
+      liftIO $ threadDelay delay
       let checkId = T.concat["service:",fromMaybe (rsName request) (rsId request)]
       passHealthCheck client checkId
