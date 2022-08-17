@@ -23,6 +23,8 @@ module Network.Consul.Client.KVStore
   , putKeyReleaseLock
   ) where
 
+import Data.Maybe (fromMaybe)
+
 import qualified Data.ByteString as B (concat) 
 import qualified Data.ByteString.Lazy as BL (fromStrict)
 import qualified Data.Text as T (concat, empty, pack, intercalate)
@@ -120,7 +122,7 @@ getKeys _client@ConsulClient{..} key index consistency = do
       x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         let body = B.concat bodyParts
-        return $ maybe [] id $ decode $ BL.fromStrict body
+        return $ fromMaybe [] $ decode $ BL.fromStrict body
       _ -> return []
   where
     cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
@@ -155,7 +157,7 @@ listKeys _client@ConsulClient{..} prefix index consistency = do
       x | x == status200 -> do
         bodyParts <- brConsume $ responseBody response
         let body = B.concat bodyParts
-        return $ maybe [] id $ decode $ BL.fromStrict body
+        return $ fromMaybe [] $ decode $ BL.fromStrict body
       _ -> return []
   where
     cons = fmap (\ x -> T.concat["consistency=", T.pack $ show x] ) consistency
