@@ -38,7 +38,7 @@ spec = setupAround consulServerSetupFunc $ modifyMaxSuccess (`div` 20) $ do
             Just _ -> return ()
             Nothing -> do
               putStrLn "Session creation failed, retrying..."
-              sleep 0.10  -- pause for 50ms
+              sleep 0.10  -- pause for 100ms
               loopUntilSession
     result <- timeout fiveSecondMicros loopUntilSession
     case result of
