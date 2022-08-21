@@ -100,7 +100,7 @@ data Consistency
 data ConsulApiResponseAclBootstrap =
   ConsulApiResponseAclBootstrap
     { consulApiResponseAclBootstrapAccessorId :: Text
-    , consulApiResponseAclBootstrapSecretID :: Text
+    , consulApiResponseAclBootstrapSecretId :: Text
     , consulApiResponseAclBootstrapDescription :: Text
     , consulApiResponseAclBootstrapPolicies :: [ConsulApiResponseAclPolicy]
     , consulApiResponseAclBootstrapLocal :: Bool
@@ -113,7 +113,7 @@ data ConsulApiResponseAclBootstrap =
 instance FromJSON ConsulApiResponseAclBootstrap where
   parseJSON (Object o) =
     ConsulApiResponseAclBootstrap
-      <$> o .: "AccessorId"
+      <$> o .: "AccessorID"
       <*> o .: "SecretID"
       <*> o .: "Description"
       <*> o .: "Policies"
@@ -134,7 +134,7 @@ data ConsulApiResponseAclPolicy =
 instance FromJSON ConsulApiResponseAclPolicy where
   parseJSON (Object o) =
     ConsulApiResponseAclPolicy
-      <$> o .: "Id"
+      <$> o .: "ID"
       <*> o .: "Name"
 
   parseJSON _ = mzero
