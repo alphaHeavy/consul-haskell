@@ -7,12 +7,12 @@ module Network.Consul.Misc
   ( runService
   ) where
 
-import Import
 import Data.Foldable (forM_)
 import Data.Maybe (fromMaybe)
 
 import qualified Data.Text as T (concat)
 
+import Import
 import Network.Consul.Client.Health
 import Network.Consul.Client.Catalog
 
