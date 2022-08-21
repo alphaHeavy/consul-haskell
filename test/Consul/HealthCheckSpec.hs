@@ -24,9 +24,9 @@ spec = setupAround consulServerSetupFunc $ do
           Nothing -> expectationFailure "testGetServiceHealth: Failed to parse result"
       False -> expectationFailure "testGetServiceHealth: Service was not created"
 
---{- Health Checks -}
---itWithOuter "testRegisterHealthCheck" $ \_ ->  do
---  client@ConsulClient{..} <- newClient
---  let check = RegisterHealthCheck "testHealthCheck" "testHealthCheck" "" Nothing Nothing (Just "15s")
---  x1 <- registerHealthCheck ccManager (hostWithScheme client) ccPort check
+  pending "testRegisterHealthCheck"
+  --it "testRegisterHealthCheck" $ \consulServerHandle ->  do
+  --  client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle 
+  --  let check = RegisterHealthCheck "testHealthCheck" "testHealthCheck" "" Nothing Nothing (Just "15s")
+  --  x1 <- registerHealthCheck ccManager (hostWithScheme client) ccPort check
 
