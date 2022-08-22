@@ -25,6 +25,7 @@ spec = setupAround (consulServerSetupFuncWith testsuiteSettingsWithAclsEnabled) 
     case response of
       Left e -> expectationFailure ("Bootstrap acls: failed " ++ e)
       Right aclBootstrapResponse -> do
+        print aclBootstrapResponse
         context "Bootstrap acls: successful" $ pure ()
 
 
