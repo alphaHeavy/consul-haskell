@@ -244,11 +244,25 @@ consulServerSetupFuncWith settings = do
   rpcPortInt <- liftIO getFreePort
   serfLanPortInt <- liftIO getFreePort
   serfWanPortInt <- liftIO getFreePort
+
+  -- consul agent config (in hcl), default with no acls enabled
+  let defaultConsulConfig = "disable_update_check = true\n"
+
+  -- consul agent config (in hcl), with acls enabled
   -- TODO: render as HCL or JSON and not some string with \n in it?
   -- TODO: default acl policy should be deny, or configurable?
+  -- When acl policy is deny, we're unable to boot b/c node registration fails due to deny policy
+  let consulConfigAclsEnabled = "disable_update_check = true\nacl = {\nenabled = true\ndefault_policy = \"allow\"\nenable_token_persistence = true\n}"
+
+  -- use default consul config file if acls not enabled, else if enabled, use the special config
+  let consulConfigFileContents =
+        case (enableAcls settings) of
+          True -> consulConfigAclsEnabled
+          False -> defaultConsulConfig
+
   configFilePath <- tempBinaryFileWithContentsSetupFunc
     "consul-test-config"
-    "disable_update_check = true\nacl = {\nenabled = true\ndefault_policy = \"allow\"\nenable_token_persistence = true\n}"
+    consulConfigFileContents
   let nodeName = ((unpack localhost) <> "-" <> (show httpPortInt)) -- node name is localhost-${PORT}
 
   -- TODO: move these definitions outside or away from this block
