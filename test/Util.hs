@@ -286,7 +286,7 @@ waitForNodeRegistration consulPort = do
 queryNodeRegistrationWithRetries :: Int -> IO Bool
 queryNodeRegistrationWithRetries consulPort =
   retrying
-      (constantDelay 50000 <> limitRetries 100) -- 100 times, 50 ms each
+      (constantDelay 50000 <> limitRetries 1000) -- 1000 times, 50 ms each, for 50s max total
       (const $ pure . not)
       (const $ queryNodeRegistrationOnce consulPort)
 
@@ -329,7 +329,7 @@ waitForLeadership consulPort = do
 queryLeadershipWithRetries :: Int -> IO Bool
 queryLeadershipWithRetries consulPort =
   retrying
-      (constantDelay 50000 <> limitRetries 100) -- 100 times, 50 ms each
+      (constantDelay 50000 <> limitRetries 1000) -- 1000 times, 50 ms each, for 50s max
       (const $ pure . not)
       (const $ queryLeadershipOnce consulPort)
 
