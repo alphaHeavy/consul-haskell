@@ -183,9 +183,6 @@ withConsulServer app = do
 -- we can simply reference that existing/registered node from the agent instead
 -- of having to make up and register a Node for the test.
 
---withConsulServer :: (ClientEnv -> IO ()) -> IO ()
---withConsulServer = undefined
-
 data ConsulServerHandle = ConsulServerHandle
   { consulServerHandleDnsPort :: !PortNumber
   , consulServerHandleGrpcPort :: !PortNumber
@@ -221,8 +218,8 @@ consulServerSetupFuncWith settings = do
   configFilePath <- tempBinaryFileWithContentsSetupFunc
     "consul-test-config"
     "{ \"disable_update_check\": true }"
-  let nodeName = ((unpack localhost) <> "-" <> (show httpPortInt)) -- hardcode node name as "localhost" * see below
   -- setup process for "how to run consul"
+  let nodeName = ((unpack localhost) <> "-" <> (show httpPortInt)) -- node name is localhost-${PORT}
   let processConfig =
         setStdout nullStream $
           setStderr nullStream $
@@ -253,11 +250,8 @@ consulServerSetupFuncWith settings = do
   -- ping consul to make sure leadership has settled and agent is ready for work
   liftIO $ waitForLeadership httpPortInt
 
-  -- TODO: enabling this block until node registration is complete kills the testsuite
-  -- in one iteration.. cannot run continuously.
+  -- ping consul to make sure the agent has registered itself as a node
   liftIO $ waitForNodeRegistration httpPortInt
-  -- sleep for 1.5 seconds to allow node registration to happen (crude, but it works..)
-  --liftIO $ threadDelay (ceiling (1.5 * 1e6))
 
   -- create our handle data structure, which is passed to tests this setupFunc wraps
   let consulServerHandleDnsPort = fromIntegral dnsPortInt
@@ -311,8 +305,7 @@ queryNodeRegistrationOnce consulPort = do
   case JSON.eitherDecode body of
     Left e -> expectationFailure $ "node registration check: could not decode the json response: " ++ e ++ (show body)
     Right nodeList -> do
-      liftIO $ print ("JSON response from consul node catalog API: " <> (show nodeList))
-      case (nodeList :: [ConsulCatalogNode]) of -- TODO switch to ConsulNode
+      case (nodeList :: [ConsulCatalogNode]) of
         [] -> pure False
         nodes -> do
           pure $ responseStatus response == ok200
