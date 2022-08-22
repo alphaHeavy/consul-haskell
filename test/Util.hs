@@ -27,7 +27,35 @@ module Util
 import qualified Data.ByteString.Char8 as BS8
 import qualified System.Process.Typed as PT
 
-import Prelude (Bool(..), Double, Either(..), Int, IO, Maybe(..), Show, Eq, ceiling, error, fromIntegral, not, print, pure, return, show, (<*>), (<$>), ($), (*), (++), (<>), (>>), (.), (==), const, undefined)
+import Prelude
+  ( Bool(..)
+  , Double
+  , Either(..)
+  , Int
+  , IO
+  , Maybe(..)
+  , Show
+  , Eq
+  , ceiling
+  , error
+  , fromIntegral
+  , not
+  , print
+  , pure
+  , return
+  , show
+  , (<*>)
+  , (<$>)
+  , ($)
+  , (*)
+  , (++)
+  , (<>)
+  , (>>)
+  , (.)
+  , (==)
+  , const
+  , undefined
+  )
 import Control.Concurrent
 import Control.Monad (mzero, when)
 import Control.Retry
