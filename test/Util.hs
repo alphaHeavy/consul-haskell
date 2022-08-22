@@ -6,9 +6,11 @@
 
 module Util
   ( ConsulServerHandle (..)
+  , TestsuiteSettings (..)
   , checkIds
   , consulPort
   , consulServerSetupFunc
+  , consulServerSetupFuncWith
   , dc1
   , fiveSecondMicros
   , newClient
@@ -60,6 +62,13 @@ import Network.Socket.Wait
 --import System.Process.Typed -- (TODO)
 import Path
 import Path.IO
+
+data TestsuiteSettings =
+  TestsuiteSettings
+    { displayConsulServerLogs :: Bool
+    , enableAcls :: Bool
+    , verboseLogs :: Bool
+    }
 
 data ConsulCatalogNode =
   ConsulCatalogNode
@@ -187,8 +196,21 @@ data ConsulServerHandle = ConsulServerHandle
   , consulServerHandleNodeName :: !Node
   }
 
+
+defaultTestsuiteSettings =
+  TestsuiteSettings
+    { displayConsulServerLogs = False
+    , enableAcls = False
+    , verboseLogs = False
+    }
+
+-- TODO: docs explain testsuite settings
 consulServerSetupFunc :: SetupFunc ConsulServerHandle
-consulServerSetupFunc = do
+consulServerSetupFunc = consulServerSetupFuncWith defaultTestsuiteSettings
+
+-- TODO: how do we test this to make sure it is not faulty?
+consulServerSetupFuncWith :: TestsuiteSettings -> SetupFunc ConsulServerHandle
+consulServerSetupFuncWith settings = do
   tempDir <- tempDirSetupFunc "consul-server"
   dnsPortInt <- liftIO getFreePort
   grpcPortInt <- liftIO getFreePort
