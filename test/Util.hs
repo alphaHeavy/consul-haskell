@@ -108,7 +108,10 @@ data ConsulCatalogNode =
 
 instance FromJSON ConsulCatalogNode where
   parseJSON (Object o) =
-    ConsulCatalogNode <$> o .: "Node" <*> o .: "Address" <*> o .: "Datacenter"
+    ConsulCatalogNode
+      <$> o .: "Node"
+      <*> o .: "Address"
+      <*> o .: "Datacenter"
   parseJSON _ = mzero
 
 -- 5 seconds.
