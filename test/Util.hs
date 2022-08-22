@@ -54,6 +54,7 @@ import Prelude
   , (.)
   , (==)
   , const
+  , filter
   , undefined
   )
 import Control.Concurrent
@@ -243,31 +244,85 @@ consulServerSetupFuncWith settings = do
   rpcPortInt <- liftIO getFreePort
   serfLanPortInt <- liftIO getFreePort
   serfWanPortInt <- liftIO getFreePort
+  -- TODO: render as HCL or JSON and not some string with \n in it?
+  -- TODO: default acl policy should be deny, or configurable?
   configFilePath <- tempBinaryFileWithContentsSetupFunc
     "consul-test-config"
-    "{ \"disable_update_check\": true }"
-  -- setup process for "how to run consul"
+    "disable_update_check = true\nacl = {\nenabled = true\ndefault_policy = \"allow\"\nenable_token_persistence = true\n}"
   let nodeName = ((unpack localhost) <> "-" <> (show httpPortInt)) -- node name is localhost-${PORT}
+
+  -- TODO: move these definitions outside or away from this block
+  -- define options for how we run consul
+  let defaultConsulServerCliArgs = 
+        [ "agent"
+        , "-node", nodeName
+        , "-dns-port", show dnsPortInt
+        , "-http-port", show httpPortInt -- (fromIntegral consulPort :: Int)
+        , "-grpc-port", show grpcPortInt -- (fromIntegral consulPort :: Int)
+        , "-server-port", show rpcPortInt
+        , "-serf-lan-port", show serfLanPortInt
+        , "-serf-wan-port", show serfWanPortInt
+        , "-config-format", "hcl"
+        , "-config-file", (fromAbsFile configFilePath)
+        ]
+
+  -- atm we run _either_ dev mode _or_ with acls enabled
+  let devModeCliArgs =
+        [ "-dev"
+        ]
+
+  let aclsEnabledCliArgs =
+        [ "-bootstrap-expect=1"
+        , "-bind=127.0.0.1"
+        , ("-data-dir=" ++ (filter (not . (== '"')) (show tempDir)))
+        , "-server=true" -- ^ drop the extra " from `show Path`
+        ]
+
+  -- TODO, set this more directly
+  let logLevelErrorCliArgs =
+        [ "-log-level", "err"
+        ]
+
+  let logLevelDebugCliArgs =
+        [ "-log-level", "debug"        -- for debugging
+        ]
+
+  -- combine default cli args with dev mode or acls enabled, plus log-level settings
+  let consulCliArgs =
+        (case (enableAcls settings) of
+          True -> defaultConsulServerCliArgs ++ aclsEnabledCliArgs
+          False -> defaultConsulServerCliArgs ++ devModeCliArgs
+        ) ++
+        (case (verboseLogs settings) of
+           True -> logLevelDebugCliArgs
+           False -> logLevelErrorCliArgs
+        )
+  
+  --liftIO $ print $ pack $ filter (not . (== '"')) (show tempDir)
+  -- print cli args we're going to use to launch consul with
+  case (verboseLogs settings) of
+    True -> liftIO $ print consulCliArgs
+    False -> pure()
+
+  -- setup process config ("how to run consul")
   let processConfig =
-        setStdout nullStream $
-          setStderr nullStream $
+        -- do we show the consul logs to testsuite stdout or hide it?
+        case (displayConsulServerLogs settings) of
+          True -> 
             setWorkingDir (fromAbsDir tempDir) $
               proc
                 "consul"
-                [ "agent", "-dev"
-                , "-node", nodeName
-                , "-log-level", "err"
-              --, "-log-level", "debug"        -- for debugging
-                , "-dns-port", show dnsPortInt
-                , "-http-port", show httpPortInt -- (fromIntegral consulPort :: Int)
-                , "-grpc-port", show grpcPortInt -- (fromIntegral consulPort :: Int)
-                , "-server-port", show rpcPortInt
-                , "-serf-lan-port", show serfLanPortInt
-                , "-serf-wan-port", show serfWanPortInt
-                , "-config-file", (fromAbsFile configFilePath)
-                ]
+                consulCliArgs
+          False ->
+            setStdout nullStream $
+              setStderr nullStream $
+                setWorkingDir (fromAbsDir tempDir) $
+                  proc
+                    "consul"
+                    consulCliArgs
   -- run consul!
   _ <- typedProcessSetupFunc processConfig
+
   -- wait until consul is listening on all ports we've provided it
   liftIO $ wait "127.0.0.1" dnsPortInt
   liftIO $ wait "127.0.0.1" httpPortInt
@@ -275,6 +330,7 @@ consulServerSetupFuncWith settings = do
   liftIO $ wait "127.0.0.1" rpcPortInt
   liftIO $ wait "127.0.0.1" serfLanPortInt
   liftIO $ wait "127.0.0.1" serfWanPortInt
+
   -- ping consul to make sure leadership has settled and agent is ready for work
   liftIO $ waitForLeadership httpPortInt
 
@@ -291,6 +347,8 @@ consulServerSetupFuncWith settings = do
       consulServerHandleNodeName = Node (pack nodeName) localNodeAddr
   pure ConsulServerHandle {..}
 
+
+--
 -- Block while we wait for the Consul agent to have itself registered as a node
 -- in the consul cluster.
 --
@@ -329,6 +387,7 @@ queryNodeRegistrationOnce consulPort = do
   manager <- newTlsManager
   response <- httpLbs request manager
   let body = responseBody response
+  -- TODO: evaluate settings and do or skip this
   --liftIO $ print $ responseBody response
   case JSON.eitherDecode body of
     Left e -> expectationFailure $ "node registration check: could not decode the json response: " ++ e ++ (show body)
