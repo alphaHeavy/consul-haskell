@@ -3,7 +3,7 @@ packages:
 - '.'
 extra-deps: []
 # When bumping the resolver, update the GHC version in shell.nix accordingly.
-resolver: lts-18.20
+resolver: lts-19.20
 
 nix:
   shell-file: shell.nix
