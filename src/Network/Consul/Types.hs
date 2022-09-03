@@ -15,6 +15,7 @@ module Network.Consul.Types (
   Config(..),
   Consistency(..),
   ConsulClient(..),
+  ConsulApiRequestAclTokenCreate(..),
   ConsulApiResponseAclBootstrap(..),
   ConsulApiResponseAclPolicy(..),
   ConsulApiResponseAclCheckReplication(..),
@@ -27,11 +28,13 @@ module Network.Consul.Types (
   KeyValuePut(..),
   Member(..),
   Node(..),
+  NodeIdentity(..),
   RegisterRequest(..),
   RegisterHealthCheck(..),
   RegisterService(..),
   Self(..),
   Service(..),
+  ServiceIdentity(..),
   ServiceResult(..),
   Session(..),
   SessionBehavior(..),
@@ -165,6 +168,7 @@ data ConsulApiResponseAclCheckReplication =
   --, consulApiResponseAclCheckReplicationLastErrorMessage :: Text -- TODO: Timestamp
     } deriving (Generic, Show, Eq)
 
+-- | TODO: document
 instance FromJSON ConsulApiResponseAclCheckReplication where
   parseJSON (Object o) =
     ConsulApiResponseCheckReplication
@@ -179,6 +183,114 @@ instance FromJSON ConsulApiResponseAclCheckReplication where
    -- <*> o .: "LastErrorMessage"
 
   parseJSON _ = mzero
+
+
+-- | TODO: document
+data ConsulApiRequestAclTokenCreate =
+  ConsulApiRequestAclTokenCreate 
+    { consulApiRequestAclTokenCreateAccessorId :: Maybe Text -- TODO: UUID
+    , consulApiRequestAclTokenCreateSecretId :: Maybe Text -- TODO: UUID
+    , consulApiRequestAclTokenCreateDescription :: Text
+    , consulApiRequestAclTokenCreatePolicies :: [AclPolicyLink] -- TODO: [Policy]
+    , consulApiRequestAclTokenCreateRoles :: [AclRoleLink] -- TODO: [Role]
+    , consulApiRequestAclTokenCreateServiceIdentities :: [ServiceIdentity]
+    , consulApiRequestAclTokenCreateNodeIdentities :: [NodeIdentity]
+    , consulApiRequestAclTokenCreateLocal :: Bool
+    , consulApiRequestAclTokenCreateExpirationTime :: Maybe Text -- TODO: Timestamp
+    , consulApiRequestAclTokenCreateExpirationTtl :: Text
+    , consulApiRequestAclTokenCreateNamespace :: Maybe Text
+    } deriving (Generic, Show, Eq)
+
+-- | TODO: document
+instance ToJSON ConsulApiRequestAclTokenCreate where
+  toJSON (ConsulApiRequestAclTokenCreate
+           accessorId
+           secretId
+           description
+           policyLinks
+           roleLinks
+           serviceIdentities
+           nodeIdentities
+           local
+           expirationTime
+           expirationTtl
+           namespace) =
+             object
+               [ "AccessorID" .= accessorId
+               , "SecretID" .= secretId
+               , "Description" .= description
+               , "Policies" .= policyLinks
+               , "Roles" .= roleLinks
+               , "ServiceIdentities" .= serviceIdentities
+               , "NodeIdentities" .= nodeIdentities
+               , "Local" .= local
+               , "ExpirationTime" .= expirationTime
+               , "ExpirationTTL" .= expirationTtl
+               , "Namespace" .= namespace
+               ]
+
+
+-- | TODO: document
+data AclRoleLink =
+  AclRoleLink
+    { aclRoleLinkId :: Maybe Text -- TODO: UUID
+    , aclRoleLinkName :: Maybe Text
+    } deriving (Show, Generic, Eq)
+
+-- | TODO: document
+instance ToJSON AclRoleLink where
+  toJSON (AclRoleLink id name) =
+    object
+      [ "ID" .= id
+      , "Name" .= name
+      ]
+
+-- | TODO: document
+data AclPolicyLink =
+  AclPolicyLink
+    { aclPolicyLinkId :: Maybe Text -- TODO: UUID?
+    , aclPolicyLinkName :: Maybe Text
+    } deriving (Show, Generic, Eq)
+
+-- | TODO: document
+instance ToJSON AclPolicyLink where
+  toJSON (AclPolicyLink id name) =
+    object
+      [ "ID" .= id
+      , "Name" .= name
+      ]
+
+-- | TODO: document
+data ServiceIdentity =
+  ServiceIdentity
+    { serviceIdentityServiceName :: Text
+    , serviceIdentityDatacenters :: [Text] -- TODO: [ConsulDatacenter]
+    } deriving (Show, Generic, Eq)
+
+-- | TODO: document
+instance ToJSON ServiceIdentity where
+  toJSON (ServiceIdentity serviceName datacenters) =
+    object
+      [ "ServiceName" .= serviceName
+      , "Datacenters" .= datacenters
+      ]
+
+
+-- | TODO: document
+data NodeIdentity =
+  NodeIdentity 
+    { nodeIdentityNodeName :: Text
+    , nodeIdentityDatacenter :: Text -- TODO: ConsulDatacenter
+    } deriving (Show, Generic, Eq)
+
+-- | TODO: document
+instance ToJSON NodeIdentity where
+  toJSON (NodeIdentity nodeName datacenter) =
+    object
+      [ "NodeName" .= nodeName
+      , "Datacenter" .= datacenter
+      ]
+
 
 {- | Represents Consul's Health Check Status
 
