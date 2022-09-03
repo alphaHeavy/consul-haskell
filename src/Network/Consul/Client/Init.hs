@@ -26,12 +26,13 @@ initializeConsulClient
   :: MonadIO m => Text -- ^
   -> PortNumber -- ^
   -> Maybe Manager -- ^
+  -> Maybe Text -- ^ AccessorId from AclToken
   -> m ConsulClient -- ^
-initializeConsulClient hostname port man = do
+initializeConsulClient hostname port man token = do
   manager <- liftIO $ case man of
                         Just x -> return x
                         Nothing -> newTlsManager
-  return $ ConsulClient manager hostname port False Nothing
+  return $ ConsulClient manager hostname port False Nothing token
                                                  -- we omit a Datacenter here for brevity
                                                  -- it's still allowed via record updates
 
@@ -45,10 +46,11 @@ initializeTlsConsulClient
   :: MonadIO m => Text -- ^
   -> PortNumber -- ^
   -> Maybe Manager -- ^
+  -> Maybe Text -- ^ AccessorId from AclToken
   -> m ConsulClient -- ^
-initializeTlsConsulClient hostname port man = do
+initializeTlsConsulClient hostname port man token = do
     manager <- liftIO $ case man of
                         Just x -> return x
                         Nothing -> newTlsManagerWith tlsManagerSettings
-    return $ ConsulClient manager hostname port True Nothing
+    return $ ConsulClient manager hostname port True Nothing token
 
