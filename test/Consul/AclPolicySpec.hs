@@ -129,3 +129,71 @@ spec = setupAround (consulServerSetupFuncWith testsuiteSettingsWithAclsEnabled) 
                 context "AclPolicyUpdate: successful" $ (aclPolicyName updatedPolicyResponse) `shouldBe` updatedPolicyName
 
 
+  it "AclPolicyReadById" $ \consulServerHandle -> do
+    client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
+    response <- aclBootstrap client{ ccDatacenter = dc1  }
+    case response of
+      Left e -> expectationFailure ("AclPolicyReadById(Bootstrap acls): failed " ++ e)
+      Right aclBootstrapResponse -> do
+        -- extract token from response
+        let token = consulApiResponseAclBootstrapSecretId aclBootstrapResponse
+        -- create another consul client that is authenticated using the new token
+        secondClient@ConsulClient{..} <-
+          newClientAuth
+            (consulServerHandleHttpPort consulServerHandle)
+            token
+        -- setup a policy record
+        let policyName = "Test-Policy"
+        let policyRequest =
+              ConsulApiRequestAclPolicyCreate
+                { consulApiRequestAclPolicyCreateName = policyName
+                , consulApiRequestAclPolicyCreateDescription = "A policy for testing"
+                , consulApiRequestAclPolicyCreateRules = "node_prefix \"\" { policy = \"read\"}"
+                , consulApiRequestAclPolicyCreateDatacenters = ["dc1"] -- None is all
+              --, consulApiRequestAclPolicyCreateNamespace = Nothing -- TODO: enterprise-only?
+                }
+        -- use the second (authenticated) client to create acl policy
+        aclPolicyResponse <- aclPolicyCreate secondClient { ccDatacenter = dc1 } policyRequest
+        case aclPolicyResponse of
+          Left e -> expectationFailure ("AclPolicyReadById: failed " ++ e)
+          Right policy -> do
+            readItBack <- aclPolicyReadById (secondClient { ccDatacenter = dc1 }) (aclPolicyId policy)
+            case readItBack of
+              Left e -> expectationFailure ("AclPolicyReadById: failed " ++ e)
+              Right p -> do
+                context "AclPolicyReadById: successful" $ (aclPolicyName p) `shouldBe` policyName
+
+
+  it "AclPolicyReadByName" $ \consulServerHandle -> do
+    client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
+    response <- aclBootstrap client{ ccDatacenter = dc1  }
+    case response of
+      Left e -> expectationFailure ("AclPolicyReadById(Bootstrap acls): failed " ++ e)
+      Right aclBootstrapResponse -> do
+        -- extract token from response
+        let token = consulApiResponseAclBootstrapSecretId aclBootstrapResponse
+        -- create another consul client that is authenticated using the new token
+        secondClient@ConsulClient{..} <-
+          newClientAuth
+            (consulServerHandleHttpPort consulServerHandle)
+            token
+        -- setup a policy record
+        let policyName = "Test-Policy"
+        let policyRequest =
+              ConsulApiRequestAclPolicyCreate
+                { consulApiRequestAclPolicyCreateName = policyName
+                , consulApiRequestAclPolicyCreateDescription = "A policy for testing"
+                , consulApiRequestAclPolicyCreateRules = "node_prefix \"\" { policy = \"read\"}"
+                , consulApiRequestAclPolicyCreateDatacenters = ["dc1"] -- None is all
+              --, consulApiRequestAclPolicyCreateNamespace = Nothing -- TODO: enterprise-only?
+                }
+        -- use the second (authenticated) client to create acl policy
+        aclPolicyResponse <- aclPolicyCreate secondClient { ccDatacenter = dc1 } policyRequest
+        case aclPolicyResponse of
+          Left e -> expectationFailure ("AclPolicyReadById: failed " ++ e)
+          Right policy -> do
+            readItBack <- aclPolicyReadByName (secondClient { ccDatacenter = dc1 }) (aclPolicyName policy)
+            case readItBack of
+              Left e -> expectationFailure ("AclPolicyReadById: failed " ++ e)
+              Right p -> do
+                context "AclPolicyReadById: successful" $ (aclPolicyName p) `shouldBe` policyName
