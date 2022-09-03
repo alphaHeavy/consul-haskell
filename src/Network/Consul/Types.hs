@@ -80,6 +80,7 @@ data ConsulClient = ConsulClient
   , ccPort :: PortNumber -- ^ Tcp Port to Http interface on Consul agent
   , ccWithTls :: Bool -- ^ Do we enable Tls on the connection?
   , ccDatacenter :: Maybe Datacenter -- ^ Is there a datacenter we scope our requests to?
+  , ccToken :: Maybe AclToken -- ^ Is there a AclToken to provide for authentication?
   }
 
 
