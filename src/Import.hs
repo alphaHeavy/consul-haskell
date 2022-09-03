@@ -25,6 +25,8 @@ module Import
   , encode
   -- Data.Text
   , Text
+  -- Data.Text.Encoding
+  , encodeUtf8
   -- Control.Monad.Catch
   , MonadMask
   -- Data.Maybe
@@ -62,6 +64,7 @@ import Data.HashMap.Strict as H (toList)
 import Data.Maybe (catMaybes, isJust, listToMaybe)
 import Data.Monoid ((<>))
 import Data.Text (Text)
+import Data.Text.Encoding (encodeUtf8)
 --import Data.Text as T -- (concat)
 import Data.Text.Read as TR
 import Data.Word
