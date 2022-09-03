@@ -9,6 +9,7 @@ Documentation is a WIP, thank you for understanding.
 module Network.Consul (
   -- ACL
     aclBootstrap
+  , aclCheckReplication
   -- Catalog
   , deregisterService
   , getDatacenters
