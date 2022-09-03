@@ -10,13 +10,16 @@ Internal data type and instance definitions for interacting with Consul's API.
 Please feel free to contribute via the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
 -}
 module Network.Consul.Types (
+  -- * Consul API Request Data Types
+  ConsulApiRequestAclPolicyCreate(..),
+  ConsulApiRequestAclTokenCreate(..),
   -- * Consul API Response Data Types
+  AclPolicy(..),
   AclToken(..),
   Check(..),
   Config(..),
   Consistency(..),
   ConsulClient(..),
-  ConsulApiRequestAclTokenCreate(..),
   ConsulApiResponseAclBootstrap(..),
   ConsulApiResponseAclPolicy(..),
   ConsulApiResponseAclCheckReplication(..),
@@ -84,6 +87,38 @@ data ConsulClient = ConsulClient
   }
 
 
+{- | Represents an Acl Policy in Consul.
+
+@since x.y.z
+-}
+data AclPolicy =
+  AclPolicy
+    { aclPolicyId :: Text -- TODO: UUID
+    , aclPolicyName :: Text -- TODO: UUID
+    , aclPolicyDescription :: Text
+    , aclPolicyRules :: Text -- TODO: something better
+    , aclPolicyDatacenters :: [Text]
+    , aclPolicyHash :: Text -- TODO: base64 encoded?
+    , aclPolicyCreateIndex :: Int
+    , aclPolicyModifyIndex :: Int
+    } deriving (Eq, Generic, Show)
+
+
+instance FromJSON AclPolicy where
+  parseJSON (Object o) =
+    AclPolicy
+      <$> o .: "ID"
+      <*> o .: "Name"
+      <*> o .: "Description"
+      <*> o .: "Rules"
+      <*> o .: "Datacenters"
+      <*> o .: "Hash"
+      <*> o .: "CreateIndex"
+      <*> o .: "ModifyIndex"
+
+  parseJSON _ = mzero
+
+
 {- | Represents an Acl Token from Consul.
 
 @since x.y.z
@@ -101,6 +136,24 @@ data AclToken =
     , aclTokenCreateIndex :: Int
     , aclTokenModifyIndex :: Int
     } deriving (Eq, Generic, Show)
+
+instance FromJSON AclToken where
+  parseJSON (Object o) =
+    AclToken
+      <$> o .: "AccessorID"
+      <*> o .: "SecretID"
+      <*> o .: "Description"
+      <*> o .: "Policies"
+      <*> o .: "Roles"
+      <*> o .: "Local"
+      <*> o .: "CreateTime"
+      <*> o .: "Hash"
+      <*> o .: "CreateIndex"
+      <*> o .: "ModifyIndex"
+
+  parseJSON _ = mzero
+
+
 
 {- | Represents a Consul Datacenter.
 
@@ -206,6 +259,33 @@ instance FromJSON ConsulApiResponseAclCheckReplication where
 
 
 -- | TODO: document
+data ConsulApiRequestAclPolicyCreate =
+  ConsulApiRequestAclPolicyCreate 
+    { consulApiRequestAclPolicyCreateName :: Text
+    , consulApiRequestAclPolicyCreateDescription :: Text
+    , consulApiRequestAclPolicyCreateRules :: Text
+    , consulApiRequestAclPolicyCreateDatacenters :: [Text] -- TODO: [ConsulDatacenter]
+  --, consulApiRequestAclPolicyCreateNamespace :: Maybe Text -- TODO: how to include enterprise-only features in the API?
+    } deriving (Generic, Show, Eq)
+
+-- | TODO: document
+instance ToJSON ConsulApiRequestAclPolicyCreate where
+  toJSON (ConsulApiRequestAclPolicyCreate
+           name
+           description
+           rules
+           datacenters) =
+    --     namespace) =
+             object
+               [ "Name" .= name
+               , "Description" .= description
+               , "Rules" .= rules
+               , "Datacenters" .= datacenters
+   --          , "Namespace" .= namespace
+               ]
+
+
+-- | TODO: document
 data ConsulApiRequestAclTokenCreate =
   ConsulApiRequestAclTokenCreate 
     { consulApiRequestAclTokenCreateAccessorId :: Maybe Text -- TODO: UUID
@@ -257,6 +337,15 @@ data AclRoleLink =
     , aclRoleLinkName :: Maybe Text
     } deriving (Show, Generic, Eq)
 
+instance FromJSON AclRoleLink where
+  parseJSON (Object o) =
+    AclRoleLink
+      <$> o .: "ID"
+      <*> o .: "Name"
+
+  parseJSON _ = mzero
+
+
 -- | TODO: document
 instance ToJSON AclRoleLink where
   toJSON (AclRoleLink id name) =
@@ -271,6 +360,15 @@ data AclPolicyLink =
     { aclPolicyLinkId :: Maybe Text -- TODO: UUID?
     , aclPolicyLinkName :: Maybe Text
     } deriving (Show, Generic, Eq)
+
+instance FromJSON AclPolicyLink where
+  parseJSON (Object o) =
+    AclPolicyLink
+      <$> o .: "ID"
+      <*> o .: "Name"
+
+  parseJSON _ = mzero
+
 
 -- | TODO: document
 instance ToJSON AclPolicyLink where
