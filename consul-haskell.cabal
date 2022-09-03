@@ -29,6 +29,8 @@ library
       Import
       Network.Consul
       Network.Consul.Client.Acl
+      Network.Consul.Client.AclPolicy
+      Network.Consul.Client.AclToken
       Network.Consul.Client.Agent
       Network.Consul.Client.Catalog
       Network.Consul.Client.Config
@@ -79,6 +81,10 @@ test-suite sydtest-testsuite
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Consul.AclPolicySpec
+      Consul.AclSpec
+      Consul.AclTokenSpec
+      Consul.AgentSpec
       Consul.HealthCheckSpec
       Consul.KeyValueSpec
       Consul.ServiceSpec
