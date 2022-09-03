@@ -63,7 +63,40 @@ aclPolicyCreate client@ConsulClient{..} policy =  do
     return $ eitherDecode $ BL.fromStrict body
 
 
-aclPolicyDelete = undefined
+-- | This endpoint deleted an existing ACL token.
+--
+-- TODO: support token auth.. improve the client initialization?
+aclPolicyDelete
+  :: ConsulClient -- ^
+  -> Text -- TODO: UUID
+  -> IO (Either String Bool) -- ^
+aclPolicyDelete client@ConsulClient{..} id =  do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <-
+    liftIO $
+      parseUrlThrow $
+        T.unpack $
+          T.concat
+            [ hostnameWithScheme
+            , ":"
+            , T.pack $ show ccPort
+            ,("/v1/acl/policy/" <> id)
+            ]
+  let tokenHeader =
+        case ccToken of 
+          Nothing -> []
+          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
+  let request = 
+        initReq
+          { method = "DELETE"
+          , requestHeaders = tokenHeader
+          }
+  liftIO $ withResponse request ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ eitherDecode $ BL.fromStrict body
+
+
 aclPolicyList = undefined
 aclPolicyRead = undefined
 aclPolicyUpdate = undefined
