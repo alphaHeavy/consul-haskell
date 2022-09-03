@@ -35,7 +35,7 @@ import Data.Aeson (eitherDecode)
 aclTokenCreate
   :: ConsulClient -- ^
   -> ConsulApiRequestAclTokenCreate
-  -> IO (Either String ConsulApiResponseAclCheckReplication) -- ^
+  -> IO (Either String AclToken) -- ^
 aclTokenCreate client@ConsulClient{..} tokenRequest =  do
   let hostnameWithScheme = hostWithScheme client
   initReq <-
