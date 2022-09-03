@@ -29,3 +29,18 @@ spec = setupAround (consulServerSetupFuncWith testsuiteSettingsWithAclsEnabled) 
         context "Bootstrap acls: successful" $ pure ()
 
 
+
+
+  it "CheckReplication" $ \consulServerHandle -> do
+    client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
+    -- specify the datacenter as part of our request
+    response <- aclBootstrap client{ ccDatacenter = dc1  }
+    case response of
+      Left e -> expectationFailure ("CheckReplication, bootstrap acls: failed " ++ e)
+      Right aclBootstrapResponse -> do
+        statusResponse <- aclCheckReplication client{ ccDatacenter = dc1 }
+        case statusResponse of
+          Left e -> expectationFailure ("CheckReplication: failed" ++ e)
+          Right aclCheckReplicationResponse -> do
+            context "CheckReplication: successful" $ pure ()
+
