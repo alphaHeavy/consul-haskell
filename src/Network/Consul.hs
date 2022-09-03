@@ -10,6 +10,14 @@ module Network.Consul (
   -- ACL
     aclBootstrap
   , aclCheckReplication
+  -- ACL Token
+  , aclTokenCreate
+  , aclTokenClone
+  , aclTokenDelete
+  , aclTokenList
+  , aclTokenRead
+  , aclTokenReadSelf
+  , aclTokenUpdate
   -- Catalog
   , deregisterService
   , getDatacenters
@@ -60,6 +68,7 @@ import Import
 import Network.Consul.Types
 -- Consul Client APIs
 import Network.Consul.Client.Acl
+import Network.Consul.Client.AclToken
 import Network.Consul.Client.Agent
 import Network.Consul.Client.Catalog
 import Network.Consul.Client.Config
