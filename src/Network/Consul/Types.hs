@@ -118,6 +118,28 @@ instance FromJSON AclPolicy where
 
   parseJSON _ = mzero
 
+instance ToJSON AclPolicy where
+  toJSON (AclPolicy
+           id
+           name
+           description
+           rules
+           datacenters
+           hash
+           createIndex
+           modifyIndex) =
+             object
+               [ "ID" .= id
+               , "Name" .= name
+               , "Description" .= description
+               , "Rules" .= rules
+               , "Datacenters" .= datacenters
+               , "Hash" .= hash
+               , "CreateIndex" .= createIndex
+               , "ModifyIndex" .= modifyIndex
+               ]
+
+
 
 {- | Represents an Acl Token from Consul.
 
