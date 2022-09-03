@@ -99,6 +99,42 @@ aclPolicyDelete client@ConsulClient{..} id =  do
 
 aclPolicyList = undefined
 aclPolicyRead = undefined
-aclPolicyUpdate = undefined
+
+-- | This endpoint creates a new ACL token.
+--
+-- TODO: support ns query parameter (namespace, enterprise-only)
+--
+-- TODO: support token, improve the client initialization?
+aclPolicyUpdate
+  :: ConsulClient -- ^
+  -> AclPolicy
+  -> IO (Either String AclPolicy) -- ^
+aclPolicyUpdate client@ConsulClient{..} policy =  do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <-
+    liftIO $
+      parseUrlThrow $
+        T.unpack $
+          T.concat
+            [ hostnameWithScheme
+            , ":"
+            , T.pack $ show ccPort
+            , ("/v1/acl/policy/" <> (aclPolicyId policy))
+            ]
+  let tokenHeader =
+        case ccToken of 
+          Nothing -> []
+          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
+  let request = 
+        initReq
+          { method = "PUT"
+          , requestBody = (RequestBodyLBS $ encode policy)
+          , requestHeaders = tokenHeader
+          }
+  liftIO $ withResponse request ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ eitherDecode $ BL.fromStrict body
+
 
 
