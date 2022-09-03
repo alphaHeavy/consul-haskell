@@ -11,7 +11,10 @@ the [repo on GitHub](https://github.com/AlphaHeavy/consul-haskell).
 
 __Missing Functions__
 
-* All.
+* Policies
+* Roles
+* Auth Methods
+* Binding Rules
 -}
 module Network.Consul.Client.Acl
   ( aclBootstrap 
