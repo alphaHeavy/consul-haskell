@@ -11,6 +11,7 @@ Please feel free to contribute via the [repo on GitHub](https://github.com/Alpha
 -}
 module Network.Consul.Types (
   -- * Consul API Response Data Types
+  AclToken(..),
   Check(..),
   Config(..),
   Consistency(..),
@@ -81,6 +82,24 @@ data ConsulClient = ConsulClient
   , ccDatacenter :: Maybe Datacenter -- ^ Is there a datacenter we scope our requests to?
   }
 
+
+{- | Represents an Acl Token from Consul.
+
+@since x.y.z
+-}
+data AclToken =
+  AclToken
+    { aclTokenAccessorId :: Text -- TODO: UUID
+    , aclTokenSecretId :: Text -- TODO: UUID
+    , aclTokenDescription :: Text
+    , aclTokenPolicyLinks :: [AclPolicyLink]
+    , aclTokenRoleLinks :: [AclRoleLink]
+    , aclTokenLocal :: Bool
+    , aclTokenCreateTime :: Text -- TODO: Timestamp
+    , aclTokenHash :: Text -- TODO: base64 encoded?
+    , aclTokenCreateIndex :: Int
+    , aclTokenModifyIndex :: Int
+    } deriving (Eq, Generic, Show)
 
 {- | Represents a Consul Datacenter.
 
