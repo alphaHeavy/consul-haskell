@@ -21,7 +21,7 @@ spec = setupAround (consulServerSetupFuncWith testsuiteSettingsWithAclsEnabled) 
   it "BootstrapAcls" $ \consulServerHandle -> do
     client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
     -- specify the datacenter as part of our request
-    response <- aclBootstrap client{ ccDatacenter = dc1  }
+    response <- aclBootstrap client{ ccDatacenter = dc1 }
     case response of
       Left e -> expectationFailure ("Bootstrap acls: failed " ++ e)
       Right aclBootstrapResponse -> do
