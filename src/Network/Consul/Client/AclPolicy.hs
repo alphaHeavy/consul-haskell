@@ -13,7 +13,8 @@ module Network.Consul.Client.AclPolicy
   ( aclPolicyCreate
   , aclPolicyDelete
   , aclPolicyList
-  , aclPolicyRead
+  , aclPolicyReadById
+  , aclPolicyReadByName
   , aclPolicyUpdate
   ) where
 
@@ -98,7 +99,6 @@ aclPolicyDelete client@ConsulClient{..} id =  do
 
 
 aclPolicyList = undefined
-aclPolicyRead = undefined
 
 -- | This endpoint creates a new ACL token.
 --
@@ -136,5 +136,82 @@ aclPolicyUpdate client@ConsulClient{..} policy =  do
     let body = B.concat bodyParts
     return $ eitherDecode $ BL.fromStrict body
 
+
+
+
+-- | This endpoint reads an existing ACL policy with the given Id.
+--
+-- TODO: support ns query parameter (namespace, enterprise-only)
+--
+-- TODO: support token, improve the client initialization?
+
+aclPolicyReadById
+  :: ConsulClient -- ^
+  -> Text -- ^ TODO: UUID
+  -> IO (Either String AclPolicy) -- ^
+aclPolicyReadById client@ConsulClient{..} id =  do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <-
+    liftIO $
+      parseUrlThrow $
+        T.unpack $
+          T.concat
+            [ hostnameWithScheme
+            , ":"
+            , (T.pack $ show ccPort)
+            , "/v1/acl/policy/"
+            , id
+            ]
+  let tokenHeader =
+        case ccToken of 
+          Nothing -> []
+          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
+  let request = 
+        initReq
+          { method = "GET"
+          , requestHeaders = tokenHeader
+          }
+  liftIO $ withResponse request ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ eitherDecode $ BL.fromStrict body
+
+
+-- | This endpoint reads an existing ACL policy with the given name.
+--
+-- TODO: support ns query parameter (namespace, enterprise-only)
+--
+-- TODO: support token, improve the client initialization?
+
+aclPolicyReadByName
+  :: ConsulClient -- ^
+  -> Text -- ^
+  -> IO (Either String AclPolicy) -- ^
+aclPolicyReadByName client@ConsulClient{..} name =  do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <-
+    liftIO $
+      parseUrlThrow $
+        T.unpack $
+          T.concat
+            [ hostnameWithScheme
+            , ":"
+            , T.pack $ show ccPort
+            , "/v1/acl/policy/name/"
+            , name
+            ]
+  let tokenHeader =
+        case ccToken of 
+          Nothing -> []
+          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
+  let request = 
+        initReq
+          { method = "GET"
+          , requestHeaders = tokenHeader
+          }
+  liftIO $ withResponse request ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ eitherDecode $ BL.fromStrict body
 
 

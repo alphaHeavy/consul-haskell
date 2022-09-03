@@ -14,7 +14,8 @@ module Network.Consul (
   , aclPolicyCreate
   , aclPolicyDelete
   , aclPolicyList
-  , aclPolicyRead
+  , aclPolicyReadById
+  , aclPolicyReadByName
   , aclPolicyUpdate
   -- ACL Token
   , aclTokenCreate
