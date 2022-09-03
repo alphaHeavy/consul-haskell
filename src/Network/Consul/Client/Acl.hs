@@ -15,6 +15,7 @@ __Missing Functions__
 -}
 module Network.Consul.Client.Acl
   ( aclBootstrap 
+  , aclCheckReplication
   ) where
 
 import Import
@@ -52,6 +53,8 @@ import Data.Aeson (eitherDecode)
 --   | Response401 Text
 --   | Response404 Text
 
+-- TODO: capture and return response code..
+-- the http api fails with 403 if the bootstrap has already been run
 aclBootstrap
   :: ConsulClient -- ^
   -> IO (Either String ConsulApiResponseAclBootstrap) -- ^
@@ -59,6 +62,33 @@ aclBootstrap client@ConsulClient{..} =  do
   let hostnameWithScheme = hostWithScheme client
   initReq <- liftIO $ parseUrlThrow $ T.unpack $ T.concat [hostnameWithScheme, ":", T.pack $ show ccPort ,"/v1/acl/bootstrap"]
   liftIO $ withResponse (initReq {method = "PUT"} ) ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ eitherDecode $ BL.fromStrict body
+
+
+-- | This endpoint returns the status of the ACL replication processes in the
+--   datacenter. This is intended to be used by operators or by automation
+--   checking to discover the health of ACL replication.
+--
+-- TODO: include dc as a query parameter, with maybe?
+--
+aclCheckReplication
+  :: ConsulClient -- ^
+  -> IO (Either String ConsulApiResponseAclCheckReplication) -- ^
+aclCheckReplication client@ConsulClient{..} =  do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <-
+    liftIO $
+      parseUrlThrow $
+        T.unpack $
+          T.concat
+            [ hostnameWithScheme
+            , ":"
+            , T.pack $ show ccPort
+            ,"/v1/acl/replication"
+            ]
+  liftIO $ withResponse initReq ccManager $ \ response -> do
     bodyParts <- brConsume $ responseBody response
     let body = B.concat bodyParts
     return $ eitherDecode $ BL.fromStrict body
