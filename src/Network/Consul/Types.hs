@@ -17,6 +17,7 @@ module Network.Consul.Types (
   ConsulClient(..),
   ConsulApiResponseAclBootstrap(..),
   ConsulApiResponseAclPolicy(..),
+  ConsulApiResponseAclCheckReplication(..),
   Datacenter (..),
   Health(..),
   HealthCheck(..),
@@ -139,6 +140,45 @@ instance FromJSON ConsulApiResponseAclPolicy where
 
   parseJSON _ = mzero
 
+-- | TODO: document
+-- {
+--   "Enabled": true,
+--   "Running": true,
+--   "SourceDatacenter": "dc1",
+--   "ReplicationType": "tokens",
+--   "ReplicatedIndex": 1976,
+--   "ReplicatedTokenIndex": 2018,
+--   "LastSuccess": "2018-11-03T06:28:58Z",
+--   "LastError": "2016-11-03T06:28:28Z",
+--   "LastErrorMessage": "failed to retrieve ACL policy updates: RPC rate limit exceeded"
+-- }
+data ConsulApiResponseAclCheckReplication =
+  ConsulApiResponseCheckReplication
+    { consulApiResponseAclCheckReplicationEnabled :: Bool
+    , consulApiResponseAclCheckReplicationRunning :: Bool
+    , consulApiResponseAclCheckReplicationSourceDatacenter :: Text
+    , consulApiResponseAclCheckReplicationReplicationType :: Text
+    , consulApiResponseAclCheckReplicationReplicatedIndex :: Int
+    , consulApiResponseAclCheckReplicationReplicatedTokenIndex :: Int
+    , consulApiResponseAclCheckReplicationLastSuccess :: Text -- TODO: Timestamp
+    , consulApiResponseAclCheckReplicationLastError :: Text -- TODO: Timestamp
+  --, consulApiResponseAclCheckReplicationLastErrorMessage :: Text -- TODO: Timestamp
+    } deriving (Generic, Show, Eq)
+
+instance FromJSON ConsulApiResponseAclCheckReplication where
+  parseJSON (Object o) =
+    ConsulApiResponseCheckReplication
+      <$> o .: "Enabled"
+      <*> o .: "Running"
+      <*> o .: "SourceDatacenter"
+      <*> o .: "ReplicationType"
+      <*> o .: "ReplicatedIndex"
+      <*> o .: "ReplicatedTokenIndex"
+      <*> o .: "LastSuccess"
+      <*> o .: "LastError"
+   -- <*> o .: "LastErrorMessage"
+
+  parseJSON _ = mzero
 
 {- | Represents Consul's Health Check Status
 
