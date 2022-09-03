@@ -10,6 +10,12 @@ module Network.Consul (
   -- ACL
     aclBootstrap
   , aclCheckReplication
+  -- ACL Policy
+  , aclPolicyCreate
+  , aclPolicyDelete
+  , aclPolicyList
+  , aclPolicyRead
+  , aclPolicyUpdate
   -- ACL Token
   , aclTokenCreate
   , aclTokenClone
@@ -68,6 +74,7 @@ import Import
 import Network.Consul.Types
 -- Consul Client APIs
 import Network.Consul.Client.Acl
+import Network.Consul.Client.AclPolicy
 import Network.Consul.Client.AclToken
 import Network.Consul.Client.Agent
 import Network.Consul.Client.Catalog
