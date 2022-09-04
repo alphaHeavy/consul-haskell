@@ -197,3 +197,59 @@ spec = setupAround (consulServerSetupFuncWith testsuiteSettingsWithAclsEnabled) 
               Left e -> expectationFailure ("AclPolicyReadById: failed " ++ e)
               Right p -> do
                 context "AclPolicyReadById: successful" $ (aclPolicyName p) `shouldBe` policyName
+
+
+  it "AclPolicyList" $ \consulServerHandle -> do
+    client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
+    response <- aclBootstrap client{ ccDatacenter = dc1  }
+    case response of
+      Left e -> expectationFailure ("AclPolicyList(Bootstrap acls): failed " ++ e)
+      Right aclBootstrapResponse -> do
+        -- extract token from response
+        let token = consulApiResponseAclBootstrapSecretId aclBootstrapResponse
+        -- create another consul client that is authenticated using the new token
+        secondClient@ConsulClient{..} <-
+          newClientAuth
+            (consulServerHandleHttpPort consulServerHandle)
+            token
+        -- setup a policy record
+        let policyName = "Test-Policy"
+        let policyRequests =
+              [ ConsulApiRequestAclPolicyCreate
+                  { consulApiRequestAclPolicyCreateName = policyName <> "-1"
+                  , consulApiRequestAclPolicyCreateDescription = "A policy for testing"
+                  , consulApiRequestAclPolicyCreateRules = "node_prefix \"\" { policy = \"read\"}"
+                  , consulApiRequestAclPolicyCreateDatacenters = ["dc1"] -- None is all
+                  }
+              , ConsulApiRequestAclPolicyCreate
+                  { consulApiRequestAclPolicyCreateName = policyName <> "-2"
+                  , consulApiRequestAclPolicyCreateDescription = "A second policy for testing"
+                  , consulApiRequestAclPolicyCreateRules = "node_prefix \"\" { policy = \"read\"}"
+                  , consulApiRequestAclPolicyCreateDatacenters = ["dc2"]
+                  }
+              , ConsulApiRequestAclPolicyCreate
+                  { consulApiRequestAclPolicyCreateName = policyName <> "-3"
+                  , consulApiRequestAclPolicyCreateDescription = "A third policy for testing"
+                  , consulApiRequestAclPolicyCreateRules = "node_prefix \"\" { policy = \"write\"}"
+                  , consulApiRequestAclPolicyCreateDatacenters = ["dc3"]
+                  }
+              ]
+        -- use the second (authenticated) client to create acl policy
+        --policies <- map (\p -> aclPolicyCreate (secondClient { ccDatacenter = dc1 }) p) policyRequests 
+        p1 <- aclPolicyCreate (secondClient { ccDatacenter = dc1 }) $ policyRequests !! 0
+        p2 <- aclPolicyCreate (secondClient { ccDatacenter = dc1 }) $ policyRequests !! 1
+        p3 <- aclPolicyCreate (secondClient { ccDatacenter = dc1 }) $ policyRequests !! 2
+        policies <- aclPolicyList secondClient { ccDatacenter = dc1 }
+        print policies
+        case policies of
+          Left e -> expectationFailure ("AclPolicyList: failed " ++ e)
+          Right aclPolicyList -> do
+            --print aclPolicyList
+            context "AclPolicyList: successful" $ pure ()
+     -- map policies (\policy -> do
+     --   case policy of
+     --     Left e -> expectationFailure ("AclPolicyList: failed " ++ e)
+     --     Right aclPolicyResponse -> do
+     --       context "AclPolicyList: successful" $ (aclPolicyName aclPolicyResponse) `shouldBe` policyName)
+
+
