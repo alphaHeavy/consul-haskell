@@ -96,8 +96,8 @@ data AclPolicy =
     { aclPolicyId :: Text -- TODO: UUID
     , aclPolicyName :: Text -- TODO: UUID
     , aclPolicyDescription :: Text
-    , aclPolicyRules :: Text -- TODO: something better
-    , aclPolicyDatacenters :: [Text]
+    , aclPolicyRules :: Maybe Text -- TODO: something better
+    , aclPolicyDatacenters :: Maybe [Text]
     , aclPolicyHash :: Text -- TODO: base64 encoded?
     , aclPolicyCreateIndex :: Int
     , aclPolicyModifyIndex :: Int
@@ -110,8 +110,8 @@ instance FromJSON AclPolicy where
       <$> o .: "ID"
       <*> o .: "Name"
       <*> o .: "Description"
-      <*> o .: "Rules"
-      <*> o .: "Datacenters"
+      <*> o .:? "Rules"
+      <*> o .:? "Datacenters" -- could be [Text] or "null"...
       <*> o .: "Hash"
       <*> o .: "CreateIndex"
       <*> o .: "ModifyIndex"
