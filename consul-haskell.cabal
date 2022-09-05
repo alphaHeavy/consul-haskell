@@ -83,6 +83,7 @@ test-suite sydtest-testsuite
   main-is: Spec.hs
   other-modules:
       Consul.AclPolicySpec
+      Consul.AclRoleSpec
       Consul.AclSpec
       Consul.AclTokenSpec
       Consul.AgentSpec
