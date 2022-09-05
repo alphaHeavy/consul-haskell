@@ -14,9 +14,11 @@ module Network.Consul.Types (
   AclPolicyLink(..),
   -- * Consul API Request Data Types
   ConsulApiRequestAclPolicyCreate(..),
+  ConsulApiRequestAclRoleCreate(..),
   ConsulApiRequestAclTokenCreate(..),
   -- * Consul API Response Data Types
   AclPolicy(..),
+  AclRole(..),
   AclToken(..),
   Check(..),
   Config(..),
@@ -141,6 +143,63 @@ instance ToJSON AclPolicy where
                , "ModifyIndex" .= modifyIndex
                ]
 
+
+
+{- | Represents an Acl Role in Consul.
+
+@since x.y.z
+-}
+data AclRole =
+  AclRole
+    { aclRoleId :: Text -- TODO: UUID
+    , aclRoleName :: Text
+    , aclRoleDescription :: Text
+    , aclRolePolicies :: Maybe [AclPolicyLink]
+    , aclRoleServiceIdentities :: Maybe [ServiceIdentity]
+    , aclRoleNodeIdentities :: Maybe [NodeIdentity]
+    , aclRoleHash :: Text -- TODO: base64 encoded?
+    , aclRoleCreateIndex :: Int
+    , aclRoleModifyIndex :: Int
+    } deriving (Eq, Generic, Show)
+
+
+instance FromJSON AclRole where
+  parseJSON (Object o) =
+    AclRole
+      <$> o .: "ID"
+      <*> o .: "Name"
+      <*> o .: "Description"
+      <*> o .:? "Policies"
+      <*> o .:? "ServiceIdentities"
+      <*> o .:? "NodeIdentities"
+      <*> o .: "Hash"
+      <*> o .: "CreateIndex"
+      <*> o .: "ModifyIndex"
+
+  parseJSON _ = mzero
+
+instance ToJSON AclRole where
+  toJSON (AclRole
+           id
+           name
+           description
+           policies
+           serviceIdentities
+           nodeIdentities
+           hash
+           createIndex
+           modifyIndex) =
+             object
+               [ "ID" .= id
+               , "Name" .= name
+               , "Description" .= description
+               , "Policies" .= policies
+               , "ServiceIdentities" .= serviceIdentities
+               , "NodeIdentities" .= nodeIdentities
+               , "Hash" .= hash
+               , "CreateIndex" .= createIndex
+               , "ModifyIndex" .= modifyIndex
+               ]
 
 
 {- | Represents an Acl Token from Consul.
@@ -305,6 +364,37 @@ instance ToJSON ConsulApiRequestAclPolicyCreate where
                , "Description" .= description
                , "Rules" .= rules
                , "Datacenters" .= datacenters
+   --          , "Namespace" .= namespace
+               ]
+
+
+-- | TODO: document
+data ConsulApiRequestAclRoleCreate =
+  ConsulApiRequestAclRoleCreate 
+    { consulApiRequestAclRoleCreateName :: Text
+    , consulApiRequestAclRoleCreateDescription :: Text
+    , consulApiRequestAclRoleCreatePolicies :: Maybe [AclPolicyLink]
+    , consulApiRequestAclRoleCreateServiceIdentities :: [ServiceIdentity]
+    , consulApiRequestAclRoleCreateNodeIdentities :: [NodeIdentity]
+  --, consulApiRequestAclRoleCreateNamespace :: Maybe Text -- TODO: how to include enterprise-only features in the API?
+    } deriving (Generic, Show, Eq)
+
+
+-- | TODO: document
+instance ToJSON ConsulApiRequestAclRoleCreate where
+  toJSON (ConsulApiRequestAclRoleCreate
+           name
+           description
+           policies
+           serviceIdentities
+           nodeIdentities) =
+    --     namespace) =
+             object
+               [ "Name" .= name
+               , "Description" .= description
+               , "Policies" .= policies
+               , "ServiceIdentities" .= serviceIdentities
+               , "NodeIdentities" .= nodeIdentities
    --          , "Namespace" .= namespace
                ]
 
