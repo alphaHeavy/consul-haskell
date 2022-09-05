@@ -155,7 +155,7 @@ dc1 = Just $ Datacenter "dc1"
 
 -- Initialize a new `ConsulClient`.
 newClient :: PortNumber -> IO ConsulClient
-newClient consulPort = initializeConsulClient localhost consulPort emptyHttpManager
+newClient consulPort = initializeConsulClient localhost consulPort emptyHttpManager Nothing
 -- (pack ((unpack localhost) <> "-" <> (show consulPort)))
 
 
