@@ -21,42 +21,16 @@ module Network.Consul.Client.AclToken
 
 import Import
 
-import qualified Data.ByteString as B (concat) 
-import qualified Data.ByteString.Lazy as BL (fromStrict)
-import qualified Data.Text as T (concat, pack, unpack)
 
-import Data.Aeson (eitherDecode)
-
-
--- | This endpoint creates a new ACL token.
---
--- TODO: support ns query parameter (namespace, enterprise-only)
---
+-- | TODO
 aclTokenCreate
   :: ConsulClient -- ^
   -> ConsulApiRequestAclTokenCreate
   -> IO (Either String AclToken) -- ^
-aclTokenCreate client@ConsulClient{..} tokenRequest =  do
-  let hostnameWithScheme = hostWithScheme client
-  initReq <-
-    liftIO $
-      parseUrlThrow $
-        T.unpack $
-          T.concat
-            [ hostnameWithScheme
-            , ":"
-            , T.pack $ show ccPort
-            ,"/v1/acl/token"
-            ]
-  let request = 
-        initReq
-          { method = "PUT"
-          , requestBody = (RequestBodyLBS $ encode tokenRequest)
-          }
-  liftIO $ withResponse request ccManager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ eitherDecode $ BL.fromStrict body
+aclTokenCreate client@ConsulClient{..} token =
+  consulHttpPutHelper client "/v1/acl/token" token
+
+
 
 aclTokenClone = undefined
 aclTokenDelete = undefined
