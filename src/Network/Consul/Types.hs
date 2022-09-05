@@ -499,6 +499,14 @@ data ServiceIdentity =
     , serviceIdentityDatacenters :: [Text] -- TODO: [ConsulDatacenter]
     } deriving (Show, Generic, Eq)
 
+instance FromJSON ServiceIdentity where
+  parseJSON (Object o) =
+    ServiceIdentity
+      <$> o .: "ServiceName"
+      <*> o .: "Datacenters"
+
+  parseJSON _ = mzero
+
 -- | TODO: document
 instance ToJSON ServiceIdentity where
   toJSON (ServiceIdentity serviceName datacenters) =
@@ -514,6 +522,14 @@ data NodeIdentity =
     { nodeIdentityNodeName :: Text
     , nodeIdentityDatacenter :: Text -- TODO: ConsulDatacenter
     } deriving (Show, Generic, Eq)
+
+instance FromJSON NodeIdentity where
+  parseJSON (Object o) =
+    NodeIdentity
+      <$> o .: "NodeName"
+      <*> o .: "Datacenter"
+
+  parseJSON _ = mzero
 
 -- | TODO: document
 instance ToJSON NodeIdentity where
