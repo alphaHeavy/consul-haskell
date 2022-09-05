@@ -237,6 +237,31 @@ instance FromJSON AclToken where
   parseJSON _ = mzero
 
 
+instance ToJSON AclToken where
+  toJSON (AclToken
+           accessorId
+           secretId
+           description
+           policies
+           roles
+           local
+           createTime
+           hash
+           createIndex
+           modifyIndex) =
+             object
+               [ "AccessorID" .= accessorId
+               , "SecretID" .= secretId
+               , "Description" .= description
+               , "Policies" .= policies
+               , "Roles" .= roles
+               , "Local" .= local
+               , "CreateTime" .= createTime
+               , "Hash" .= hash
+               , "CreateIndex" .= createIndex
+               , "ModifyIndex" .= modifyIndex
+               ]
+
 
 {- | Represents a Consul Datacenter.
 
