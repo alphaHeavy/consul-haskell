@@ -30,6 +30,7 @@ library
       Network.Consul
       Network.Consul.Client.Acl
       Network.Consul.Client.AclPolicy
+      Network.Consul.Client.AclRole
       Network.Consul.Client.AclToken
       Network.Consul.Client.Agent
       Network.Consul.Client.Catalog
