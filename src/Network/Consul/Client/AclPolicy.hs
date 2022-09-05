@@ -20,150 +20,45 @@ module Network.Consul.Client.AclPolicy
 
 import Import
 
-import qualified Data.ByteString as B (concat) 
-import qualified Data.ByteString.Lazy as BL (fromStrict)
-import qualified Data.Text as T (concat, pack, unpack)
-
-import Data.Aeson (eitherDecode)
-
-
--- | This endpoint creates a new ACL token.
+-- | This endpoint creates a new ACL policy.
 --
 -- TODO: support ns query parameter (namespace, enterprise-only)
 --
--- TODO: support token, improve the client initialization?
 aclPolicyCreate
   :: ConsulClient -- ^
   -> ConsulApiRequestAclPolicyCreate
   -> IO (Either String AclPolicy) -- ^
-aclPolicyCreate client@ConsulClient{..} policy =  do
-  let hostnameWithScheme = hostWithScheme client
-  initReq <-
-    liftIO $
-      parseUrlThrow $
-        T.unpack $
-          T.concat
-            [ hostnameWithScheme
-            , ":"
-            , T.pack $ show ccPort
-            ,"/v1/acl/policy"
-            ]
-  let tokenHeader =
-        case ccToken of 
-          Nothing -> []
-          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
-  let request = 
-        initReq
-          { method = "PUT"
-          , requestBody = (RequestBodyLBS $ encode policy)
-          , requestHeaders = tokenHeader
-          }
-  liftIO $ withResponse request ccManager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ eitherDecode $ BL.fromStrict body
+aclPolicyCreate client@ConsulClient{..} policy =
+  consulHttpPutHelper client "/v1/acl/policy" policy
 
 
--- | This endpoint deleted an existing ACL token.
+-- | This endpoint deletes an existing ACL policy.
 --
--- TODO: support token auth.. improve the client initialization?
 aclPolicyDelete
   :: ConsulClient -- ^
   -> Text -- TODO: UUID
   -> IO (Either String Bool) -- ^
 aclPolicyDelete client@ConsulClient{..} id =  do
-  let hostnameWithScheme = hostWithScheme client
-  initReq <-
-    liftIO $
-      parseUrlThrow $
-        T.unpack $
-          T.concat
-            [ hostnameWithScheme
-            , ":"
-            , T.pack $ show ccPort
-            ,("/v1/acl/policy/" <> id)
-            ]
-  let tokenHeader =
-        case ccToken of 
-          Nothing -> []
-          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
-  let request = 
-        initReq
-          { method = "DELETE"
-          , requestHeaders = tokenHeader
-          }
-  liftIO $ withResponse request ccManager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ eitherDecode $ BL.fromStrict body
+  consulHttpDeleteHelper client ("/v1/acl/policy/" <> id)
 
 
-
--- | This endpoint creates a new ACL token.
+-- | This endpoint lists (all?) ACL policies.
 --
 -- TODO: support ns query parameter (namespace, enterprise-only)
 --
--- TODO: support token, improve the client initialization?
 aclPolicyList
   :: ConsulClient -- ^
   -> IO (Either String [AclPolicy]) -- ^
-aclPolicyList client@ConsulClient{..} =  do
-  let hostnameWithScheme = hostWithScheme client
-  initReq <-
-    liftIO $
-      parseUrlThrow $
-        T.unpack $
-          T.concat
-            [ hostnameWithScheme
-            , ":"
-            , T.pack $ show ccPort
-            , "/v1/acl/policies"
-            ]
-  let tokenHeader =
-        case ccToken of 
-          Nothing -> []
-          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
-  let request = 
-        initReq
-          { method = "GET"
-          , requestHeaders = tokenHeader
-          }
-  liftIO $ withResponse request ccManager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ eitherDecode $ BL.fromStrict body
+aclPolicyList client@ConsulClient{..} = -- do
+  consulHttpGetHelper client "/v1/acl/policies"
 
 
 aclPolicyUpdate
   :: ConsulClient -- ^
   -> AclPolicy
   -> IO (Either String AclPolicy) -- ^
-aclPolicyUpdate client@ConsulClient{..} policy =  do
-  let hostnameWithScheme = hostWithScheme client
-  initReq <-
-    liftIO $
-      parseUrlThrow $
-        T.unpack $
-          T.concat
-            [ hostnameWithScheme
-            , ":"
-            , T.pack $ show ccPort
-            , ("/v1/acl/policy/" <> (aclPolicyId policy))
-            ]
-  let tokenHeader =
-        case ccToken of 
-          Nothing -> []
-          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
-  let request = 
-        initReq
-          { method = "PUT"
-          , requestBody = (RequestBodyLBS $ encode policy)
-          , requestHeaders = tokenHeader
-          }
-  liftIO $ withResponse request ccManager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ eitherDecode $ BL.fromStrict body
+aclPolicyUpdate client policy = -- do
+  consulHttpPutHelper client ("/v1/acl/policy/" <> (aclPolicyId policy)) policy
 
 
 
@@ -172,75 +67,23 @@ aclPolicyUpdate client@ConsulClient{..} policy =  do
 --
 -- TODO: support ns query parameter (namespace, enterprise-only)
 --
--- TODO: support token, improve the client initialization?
-
 aclPolicyReadById
   :: ConsulClient -- ^
   -> Text -- ^ TODO: UUID
   -> IO (Either String AclPolicy) -- ^
-aclPolicyReadById client@ConsulClient{..} id =  do
-  let hostnameWithScheme = hostWithScheme client
-  initReq <-
-    liftIO $
-      parseUrlThrow $
-        T.unpack $
-          T.concat
-            [ hostnameWithScheme
-            , ":"
-            , (T.pack $ show ccPort)
-            , "/v1/acl/policy/"
-            , id
-            ]
-  let tokenHeader =
-        case ccToken of 
-          Nothing -> []
-          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
-  let request = 
-        initReq
-          { method = "GET"
-          , requestHeaders = tokenHeader
-          }
-  liftIO $ withResponse request ccManager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ eitherDecode $ BL.fromStrict body
+aclPolicyReadById client id =  do
+  consulHttpGetHelper client ("/v1/acl/policy/" <> id)
 
 
 -- | This endpoint reads an existing ACL policy with the given name.
 --
 -- TODO: support ns query parameter (namespace, enterprise-only)
 --
--- TODO: support token, improve the client initialization?
-
 aclPolicyReadByName
   :: ConsulClient -- ^
   -> Text -- ^
   -> IO (Either String AclPolicy) -- ^
-aclPolicyReadByName client@ConsulClient{..} name =  do
-  let hostnameWithScheme = hostWithScheme client
-  initReq <-
-    liftIO $
-      parseUrlThrow $
-        T.unpack $
-          T.concat
-            [ hostnameWithScheme
-            , ":"
-            , T.pack $ show ccPort
-            , "/v1/acl/policy/name/"
-            , name
-            ]
-  let tokenHeader =
-        case ccToken of 
-          Nothing -> []
-          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
-  let request = 
-        initReq
-          { method = "GET"
-          , requestHeaders = tokenHeader
-          }
-  liftIO $ withResponse request ccManager $ \ response -> do
-    bodyParts <- brConsume $ responseBody response
-    let body = B.concat bodyParts
-    return $ eitherDecode $ BL.fromStrict body
+aclPolicyReadByName client name = -- do
+  consulHttpGetHelper client ("/v1/acl/policy/name/" <> name)
 
 
