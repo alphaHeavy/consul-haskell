@@ -14,6 +14,7 @@ module Util
   , dc1
   , fiveSecondMicros
   , newClient
+  , newClientAuth
   , withProcessTerm
   , waitForConsulOrFail
   , sleep
@@ -158,6 +159,10 @@ newClient :: PortNumber -> IO ConsulClient
 newClient consulPort = initializeConsulClient localhost consulPort emptyHttpManager Nothing
 -- (pack ((unpack localhost) <> "-" <> (show consulPort)))
 
+-- Initialize a new `ConsulClient` with an `AclToken` for authentication
+newClientAuth :: PortNumber -> Text -> IO ConsulClient
+newClientAuth consulPort token =
+  initializeConsulClient localhost consulPort emptyHttpManager (Just token)
 
 
 -- Backwards compatible `withProcessTerm`.
