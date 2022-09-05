@@ -9,6 +9,9 @@ Feel free to contribute via the [repo on GitHub](https://github.com/AlphaHeavy/c
 -}
 module Network.Consul.Internal
   ( hostWithScheme
+  , consulHttpDeleteHelper
+  , consulHttpGetHelper
+  , consulHttpPutHelper
   , createRequest
   , decodeAndStrip
   , emptyHttpManager
@@ -16,15 +19,19 @@ module Network.Consul.Internal
   ) where
 
 import Control.Monad.IO.Class
+import Data.Aeson (eitherDecode, encode)
+import qualified Data.ByteString as B (concat)
+import qualified Data.ByteString.Lazy as BL (fromStrict)
 import Data.ByteString (ByteString)
 import Data.Maybe
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Text.Read as TR
 import Network.Consul.Types
 import Network.HTTP.Client
-import Network.HTTP.Types ()
+import Network.HTTP.Types
 import Network.Socket (PortNumber)
 
 {- |
@@ -100,3 +107,119 @@ TODO: review/update?
 parseTtl :: Integral t => Text -- ^
          -> t -- ^
 parseTtl ttl = let Right (x,_) = TR.decimal $ T.filter (/= 's') ttl in x
+
+
+{- | Helper function for Http PUT requests with consul using the ConsulClient
+
+TODO: review/update?
+
+@since 0.0.0
+-}
+--consulHttpPutHelper
+--  :: ConsulClient -- ^
+--  -> Text -- ^
+--  -> ? -- ^
+--  -> ? -- ^
+consulHttpPutHelper client@ConsulClient{..} urlPath body = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <-
+    liftIO $
+      parseUrlThrow $
+        T.unpack $
+          T.concat
+            [ hostnameWithScheme
+            , ":"
+            , T.pack $ show ccPort
+            , urlPath
+            ]
+  let tokenHeader =
+        case ccToken of
+          Nothing -> []
+          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
+  let request =
+        initReq
+          { method = "PUT"
+          , requestBody = (RequestBodyLBS $ encode body)
+          , requestHeaders = tokenHeader
+          }
+  liftIO $ withResponse request ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ eitherDecode $ BL.fromStrict body
+
+
+{- | Helper function for Http DELETE requests with consul using the ConsulClient
+
+TODO: review/update?
+
+@since 0.0.0
+-}
+--consulHttpDeleteHelper
+--  :: ConsulClient -- ^
+--  -> Text -- ^
+--  -> ? -- ^
+--  -> ? -- ^
+consulHttpDeleteHelper client@ConsulClient{..} urlPath = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <-
+    liftIO $
+      parseUrlThrow $
+        T.unpack $
+          T.concat
+            [ hostnameWithScheme
+            , ":"
+            , T.pack $ show ccPort
+            , urlPath
+            ]
+  let tokenHeader =
+        case ccToken of
+          Nothing -> []
+          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
+  let request =
+        initReq
+          { method = "DELETE"
+          , requestHeaders = tokenHeader
+          }
+  liftIO $ withResponse request ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ eitherDecode $ BL.fromStrict body
+
+
+{- | Helper function for Http GET requests with consul using the ConsulClient
+
+TODO: review/update?
+
+@since 0.0.0
+-}
+--consulHttpGetHelper
+--  :: ConsulClient -- ^
+--  -> Text -- ^
+--  -> ? -- ^
+--  -> ? -- ^
+consulHttpGetHelper client@ConsulClient{..} urlPath = do
+  let hostnameWithScheme = hostWithScheme client
+  initReq <-
+    liftIO $
+      parseUrlThrow $
+        T.unpack $
+          T.concat
+            [ hostnameWithScheme
+            , ":"
+            , T.pack $ show ccPort
+            , urlPath
+            ]
+  let tokenHeader =
+        case ccToken of
+          Nothing -> []
+          Just token -> [(hAuthorization, (encodeUtf8 ("Bearer " <> token)))]
+  let request =
+        initReq
+          { method = "GET"
+          , requestHeaders = tokenHeader
+          }
+  liftIO $ withResponse request ccManager $ \ response -> do
+    bodyParts <- brConsume $ responseBody response
+    let body = B.concat bodyParts
+    return $ eitherDecode $ BL.fromStrict body
+
