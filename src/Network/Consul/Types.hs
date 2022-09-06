@@ -431,13 +431,13 @@ data ConsulApiRequestAclTokenCreate =
     { consulApiRequestAclTokenCreateAccessorId :: Maybe Text -- TODO: UUID
     , consulApiRequestAclTokenCreateSecretId :: Maybe Text -- TODO: UUID
     , consulApiRequestAclTokenCreateDescription :: Text
-    , consulApiRequestAclTokenCreatePolicies :: [AclPolicyLink] -- TODO: [Policy]
-    , consulApiRequestAclTokenCreateRoles :: [AclRoleLink] -- TODO: [Role]
+    , consulApiRequestAclTokenCreatePolicies :: Maybe [AclPolicyLink] -- TODO: [Policy]
+    , consulApiRequestAclTokenCreateRoles :: Maybe [AclRoleLink] -- TODO: [Role]
     , consulApiRequestAclTokenCreateServiceIdentities :: [ServiceIdentity]
     , consulApiRequestAclTokenCreateNodeIdentities :: [NodeIdentity]
     , consulApiRequestAclTokenCreateLocal :: Bool
     , consulApiRequestAclTokenCreateExpirationTime :: Maybe Text -- TODO: Timestamp
-    , consulApiRequestAclTokenCreateExpirationTtl :: Text
+    , consulApiRequestAclTokenCreateExpirationTtl :: Maybe Text
     } deriving (Generic, Show, Eq)
 
 -- | TODO: document
