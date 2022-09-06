@@ -60,11 +60,11 @@ spec = setupAround (consulServerSetupFuncWith testsuiteSettingsWithAclsEnabled) 
                   --, consulApiRequestAclRoleCreateNamespace = Nothing -- TODO: enterprise-only?
                     }
             -- use the second (authenticated) client to create acl role
-            role <- aclRoleCreate secondClient { ccDatacenter = dc1 } roleRequest
-            case role of
+            aclRoleResponse <- aclRoleCreate secondClient { ccDatacenter = dc1 } roleRequest
+            case aclRoleResponse of
               Left e -> expectationFailure ("AclRoleCreate: failed " ++ e)
-              Right aclRoleResponse ->
-                context "AclRoleCreate: successful" $ (aclRoleName aclRoleResponse) `shouldBe` roleName
+              Right role ->
+                context "AclRoleCreate: successful" $ (aclRoleName role) `shouldBe` roleName
 
   it "AclRoleDelete" $ \consulServerHandle -> do
     client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
