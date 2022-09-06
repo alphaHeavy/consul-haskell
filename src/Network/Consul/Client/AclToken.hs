@@ -61,7 +61,7 @@ aclTokenReadById
   :: ConsulClient -- ^
   -> Text -- ^ TODO: AccessorId (UUID)
   -> IO (Either String AclToken) -- ^
-aclTokenReadById client id =  do
+aclTokenReadById client id =
   consulHttpGetHelper client ("/v1/acl/token/" <> id)
 
 -- | This endpoint returns the ACL token details that matches the secret ID
@@ -72,7 +72,7 @@ aclTokenReadById client id =  do
 aclTokenReadSelf
   :: ConsulClient -- ^
   -> IO (Either String AclToken) -- ^
-aclTokenReadSelf client =  do
+aclTokenReadSelf client =
   consulHttpGetHelper client "/v1/acl/token/self/"
 
 
