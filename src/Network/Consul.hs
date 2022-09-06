@@ -29,7 +29,7 @@ module Network.Consul (
   , aclTokenClone
   , aclTokenDelete
   , aclTokenList
-  , aclTokenRead
+  , aclTokenReadById
   , aclTokenReadSelf
   , aclTokenUpdate
   -- Catalog
