@@ -17,6 +17,13 @@ module Network.Consul (
   , aclPolicyReadById
   , aclPolicyReadByName
   , aclPolicyUpdate
+  -- ACL Role
+  , aclRoleCreate
+  , aclRoleDelete
+  , aclRoleList
+  , aclRoleReadById
+  , aclRoleReadByName
+  , aclRoleUpdate
   -- ACL Token
   , aclTokenCreate
   , aclTokenClone
@@ -76,6 +83,7 @@ import Network.Consul.Types
 -- Consul Client APIs
 import Network.Consul.Client.Acl
 import Network.Consul.Client.AclPolicy
+import Network.Consul.Client.AclRole
 import Network.Consul.Client.AclToken
 import Network.Consul.Client.Agent
 import Network.Consul.Client.Catalog
