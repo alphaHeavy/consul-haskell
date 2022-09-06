@@ -356,6 +356,12 @@ consulServerSetupFuncWith settings = do
   -- ping consul to make sure leadership has settled and agent is ready for work
   liftIO $ waitForLeadership httpPortInt
 
+  -- pause for a moment.. but only if Acls are enabled
+  -- this pause/delay resolves issues with cluster leadership errors
+  case (enableAcls settings) of
+    True -> liftIO $ sleep 3
+    False -> pure ()
+
   -- ping consul to make sure the agent has registered itself as a node
   liftIO $ waitForNodeRegistration httpPortInt
 
