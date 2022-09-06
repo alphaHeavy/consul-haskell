@@ -437,7 +437,6 @@ data ConsulApiRequestAclTokenCreate =
     , consulApiRequestAclTokenCreateLocal :: Bool
     , consulApiRequestAclTokenCreateExpirationTime :: Maybe Text -- TODO: Timestamp
     , consulApiRequestAclTokenCreateExpirationTtl :: Text
-    , consulApiRequestAclTokenCreateNamespace :: Maybe Text
     } deriving (Generic, Show, Eq)
 
 -- | TODO: document
@@ -452,8 +451,7 @@ instance ToJSON ConsulApiRequestAclTokenCreate where
            nodeIdentities
            local
            expirationTime
-           expirationTtl
-           namespace) =
+           expirationTtl) =
              object
                [ "AccessorID" .= accessorId
                , "SecretID" .= secretId
@@ -465,7 +463,6 @@ instance ToJSON ConsulApiRequestAclTokenCreate where
                , "Local" .= local
                , "ExpirationTime" .= expirationTime
                , "ExpirationTTL" .= expirationTtl
-               , "Namespace" .= namespace
                ]
 
 
