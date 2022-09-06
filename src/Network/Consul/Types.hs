@@ -12,6 +12,7 @@ Please feel free to contribute via the [repo on GitHub](https://github.com/Alpha
 module Network.Consul.Types (
   -- * Consul API Other Types
   AclPolicyLink(..),
+  AclRoleLink(..),
   -- * Consul API Request Data Types
   ConsulApiRequestAclPolicyCreate(..),
   ConsulApiRequestAclRoleCreate(..),
