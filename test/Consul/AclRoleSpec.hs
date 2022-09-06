@@ -38,10 +38,10 @@ spec = setupAround (consulServerSetupFuncWith testsuiteSettingsWithAclsEnabled) 
                 , consulApiRequestAclPolicyCreateDatacenters = ["dc1"] -- None is all
               --, consulApiRequestAclPolicyCreateNamespace = Nothing -- TODO: enterprise-only?
                 }
-        -- use the second (authenticated) client to create acl policy
+        -- use the second (authenticated) client to create acl policy and role
         aclPolicyResponse <- aclPolicyCreate secondClient { ccDatacenter = dc1 } policyRequest
         case aclPolicyResponse of
-          Left e -> expectationFailure ("AclPolicyCreate: failed " ++ e)
+          Left e -> expectationFailure ("AclRoleCreate(createPolicy): failed " ++ e)
           Right policy -> do
             -- create a AclPolicyLink for the Role's "policies" field
             let policyLink = AclPolicyLink
