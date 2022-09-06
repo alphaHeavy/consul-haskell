@@ -249,3 +249,23 @@ spec = setupAround (consulServerSetupFuncWith testsuiteSettingsWithAclsEnabled) 
                       Right t -> do
                         context "AclTokenReadById: successful" $ (aclRoleLinkId $ (aclTokenRoleLinks t) !! 0) `shouldBe` (aclRoleLinkId roleLink)
 
+
+  pending "AclTokenReadSelf"
+--it "AclTokenReadSelf" $ \consulServerHandle -> do
+--  client@ConsulClient{..} <- newClient $ consulServerHandleHttpPort consulServerHandle
+--  response <- aclBootstrap client{ ccDatacenter = dc1  }
+--  case response of
+--    Left e -> expectationFailure ("AclTokenReadById(aclBootstrap): failed " ++ e)
+--    Right aclBootstrapResponse -> do
+--      -- extract token from response
+--      let token = consulApiResponseAclBootstrapSecretId aclBootstrapResponse
+--      -- create another consul client that is authenticated using the new token
+--      secondClient@ConsulClient{..} <-
+--        newClientAuth
+--          (consulServerHandleHttpPort consulServerHandle)
+--          token
+--      selfResponse <- aclTokenReadSelf secondClient
+--      case selfResponse of
+--        Left e -> expectationFailure ("AclTokenReadSelf: failed " ++ e)
+--        Right self ->
+--          context "AclTokenReadSelf: successful" $ (aclTokenSecretId self) `shouldBe` token
