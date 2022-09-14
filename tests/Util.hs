@@ -73,7 +73,7 @@ dc1 = Just $ Datacenter "dc1"
 
 -- Initialize a new `ConsulClient`.
 newClient :: IO ConsulClient
-newClient = initializeConsulClient localhost consulPort emptyHttpManager
+newClient = initializeConsulClient localhost consulPort emptyHttpManager Nothing
 
 
 
