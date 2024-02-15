@@ -59,7 +59,7 @@ library
     , base >=4.10 && <5
     , base64-bytestring
     , bytestring
-    , connection
+    , crypton-connection
     , either
     , exceptions
     , http-client
